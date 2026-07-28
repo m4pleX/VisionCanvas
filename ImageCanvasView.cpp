@@ -266,7 +266,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				return false;
 			}
 
-			// 通用两步绘制（矩形、旋转矩形等）
+			// 通用两步绘制（矩形、旋转矩形、椭圆等）
 			if (event->type() == QEvent::MouseButtonPress)
 			{
 				QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -284,11 +284,24 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						m_ghostRect->setZValue(99);
 						m_ghostRect->setRect(QRectF(m_anchorPoint, QSizeF(0, 0)));
 						m_scene->addItem(m_ghostRect);
+						// 椭圆的 ghost ellipse
+						if (m_currentShape == Shape_Ellipse)
+						{
+							m_ghostEllipse = new QGraphicsEllipseItem();
+							QPen ghostEPen(QColor(0, 180, 255), m_penWidth, Qt::DashLine);
+							ghostEPen.setCosmetic(true);
+							m_ghostEllipse->setPen(ghostEPen);
+							m_ghostEllipse->setBrush(QColor(0, 180, 255, 20));
+							m_ghostEllipse->setZValue(99);
+							m_ghostEllipse->setRect(m_ghostRect->rect());
+							m_scene->addItem(m_ghostEllipse);
+						}
 					}
 					else if (m_drawStep == 1)
 					{
 						commitShapeGeneric(m_currentShape);
 						if (m_ghostRect) { m_scene->removeItem(m_ghostRect); delete m_ghostRect; m_ghostRect = nullptr; }
+						if (m_ghostEllipse) { m_scene->removeItem(m_ghostEllipse); delete m_ghostEllipse; m_ghostEllipse = nullptr; }
 						hideDrawModeOverlay();
 						m_mode = Mode_None;
 						m_drawStep = 0;
@@ -307,7 +320,11 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			else if (event->type() == QEvent::MouseMove && (m_drawStep == 0 || m_drawStep == 1))
 			{
 				if (m_drawStep == 1)
+				{
 					updateGhostRect(scenePos);
+					if (m_currentShape == Shape_Ellipse && m_ghostEllipse && m_ghostRect)
+						m_ghostEllipse->setRect(m_ghostRect->rect());
+				}
 				event->accept();
 				return true;
 			}
@@ -362,7 +379,10 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		// 旋转拖拽中
 		if (m_isRotating && event->type() == QEvent::MouseMove)
 		{
-			updateRotatedRectFromHandle(scenePos);
+			if (m_dragShape && m_dragShape->type == Shape_Ellipse)
+				updateEllipseFromHandle(scenePos);
+			else
+				updateRotatedRectFromHandle(scenePos);
 			event->accept();
 			return true;
 		}
@@ -373,6 +393,8 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				updateRotatedRectFromHandle(scenePos);
 			else if (m_dragShape && m_dragShape->type == Shape_Circle)
 				updateCircleFromHandle(scenePos);
+			else if (m_dragShape && m_dragShape->type == Shape_Ellipse)
+				updateEllipseFromHandle(scenePos);
 			else
 				updateRectFromHandle(scenePos);
 			event->accept();
@@ -392,6 +414,11 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				{
 					m_activeShape->circle.cx = scenePos.x() - m_dragOffset.x();
 					m_activeShape->circle.cy = scenePos.y() - m_dragOffset.y();
+				}
+				else if (m_activeShape->type == Shape_Ellipse)
+				{
+					m_activeShape->ellipse.cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->ellipse.cy = scenePos.y() - m_dragOffset.y();
 				}
 				else
 				{
@@ -439,6 +466,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						else if (m_activeShape->type == Shape_Circle)
 							m_dragStartRect = { m_activeShape->circle.cx, m_activeShape->circle.cy,
 							                    m_activeShape->circle.r * 2, m_activeShape->circle.r * 2 };
+						else if (m_activeShape->type == Shape_Ellipse)
+							m_dragStartRect = { m_activeShape->ellipse.cx, m_activeShape->ellipse.cy,
+							                    m_activeShape->ellipse.r1 * 2, m_activeShape->ellipse.r2 * 2 };
 						else
 							m_dragStartRect = m_activeShape->rect;
 						clearAllHandleHover();
@@ -459,6 +489,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				else if (m_activeShape->type == Shape_Circle)
 					m_dragOffset = QPointF(scenePos.x() - m_activeShape->circle.cx,
 					                       scenePos.y() - m_activeShape->circle.cy);
+				else if (m_activeShape->type == Shape_Ellipse)
+					m_dragOffset = QPointF(scenePos.x() - m_activeShape->ellipse.cx,
+					                       scenePos.y() - m_activeShape->ellipse.cy);
 				else
 					m_dragOffset = QPointF(scenePos.x() - m_activeShape->rect.cx,
 					                       scenePos.y() - m_activeShape->rect.cy);
@@ -729,6 +762,8 @@ void ImageCanvasView::applyStyle(DrawShapeItem* shape)
 		{ p->setPen(pen); p->setBrush(Qt::NoBrush); }
 	else if (auto* e = dynamic_cast<QGraphicsEllipseItem*>(shape->item))
 		{ e->setPen(pen); e->setBrush(Qt::NoBrush); }
+	else if (auto* pa = dynamic_cast<QGraphicsPathItem*>(shape->item))
+		{ pa->setPen(pen); pa->setBrush(Qt::NoBrush); }
 }
 
 // ===== 绘制模式浮层 =====
@@ -1029,6 +1064,7 @@ void ImageCanvasView::commitShapeGeneric(DrawShapeType type)
 	{
 	case Shape_Rect:       commitRect();       break;
 	case Shape_RotateRect: commitRotatedRect();break;
+	case Shape_Ellipse:    commitEllipse();    break;
 	default: break;
 	}
 }
@@ -1091,6 +1127,24 @@ void ImageCanvasView::commitRotatedRect()
 	rebuildShapeOnScene(shape);
 }
 
+// ===== 椭圆提交 =====
+void ImageCanvasView::commitEllipse()
+{
+	if (!m_ghostRect) return;
+	QRectF gr = m_ghostRect->rect();
+	double cx = gr.center().x(), cy = gr.center().y();
+	double r1 = gr.width()/2.0, r2 = gr.height()/2.0;
+	if (r1 < 1.5 || r2 < 1.5) return;
+
+	DrawShapeItem* shape = findShapeByType(Shape_Ellipse);
+	if (!shape) { shape = new DrawShapeItem(Shape_Ellipse); m_shapes.append(shape); }
+	shape->ellipse = { cx, cy, r1, r2, 0.0 };
+
+	clearSceneShape();
+	m_activeShape = shape;
+	rebuildShapeOnScene(shape);
+}
+
 // ===== 形状查询 =====
 
 DrawShapeItem* ImageCanvasView::findShapeByType(DrawShapeType type)
@@ -1143,6 +1197,22 @@ QGraphicsItem* ImageCanvasView::buildShapeItem(const DrawShapeItem& shape)
 		item = e;
 		break;
 	}
+	case Shape_Ellipse:
+	{
+		double r1 = shape.ellipse.r1, r2 = shape.ellipse.r2;
+		double rad = qDegreesToRadians(shape.ellipse.angle);
+		// 用 QPainterPath 画旋转椭圆
+		QPainterPath path;
+		path.addEllipse(QPointF(0,0), r1, r2);
+		QTransform t;
+		t.translate(shape.ellipse.cx, shape.ellipse.cy);
+		t.rotate(shape.ellipse.angle);
+		QGraphicsPathItem* p = new QGraphicsPathItem();
+		p->setPath(t.map(path));
+		p->setZValue(80);
+		item = p;
+		break;
+	}
 	default: break;
 	}
 	return item;
@@ -1164,6 +1234,7 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 	double angle = 0;
 	bool isRotatedRect = false;
 	bool isCircle = false;
+	bool isEllipse = false;
 
 	switch (shape->type)
 	{
@@ -1181,6 +1252,12 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 		cx = shape->circle.cx; cy = shape->circle.cy;
 		halfW = shape->circle.r; halfH = shape->circle.r;
 		isCircle = true;
+		break;
+	case Shape_Ellipse:
+		cx = shape->ellipse.cx; cy = shape->ellipse.cy;
+		halfW = shape->ellipse.r1; halfH = shape->ellipse.r2;
+		angle = shape->ellipse.angle;
+		isEllipse = true;
 		break;
 	}
 	if (halfW <= 0 && halfH <= 0) return;
@@ -1212,6 +1289,65 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 		shape->circumRect->setBrush(Qt::NoBrush);
 		shape->circumRect->setZValue(75);
 		m_scene->addItem(shape->circumRect);
+	}
+	else if (isEllipse)
+	{
+		// 椭圆：4 个控制点（上下左右，局部坐标），旋转后转换到世界坐标系
+		QPointF localPts[4] = { {halfW,0},{0,-halfH},{-halfW,0},{0,halfH} };
+		for (int i = 0; i < 4; ++i)
+		{
+			double rx = localPts[i].x() * qCos(qDegreesToRadians(angle)) - localPts[i].y() * qSin(qDegreesToRadians(angle));
+			double ry = localPts[i].x() * qSin(qDegreesToRadians(angle)) + localPts[i].y() * qCos(qDegreesToRadians(angle));
+			QPointF wp(rx + cx, ry + cy);
+			QGraphicsEllipseItem* h = new QGraphicsEllipseItem(wp.x()-kHandleRadius, wp.y()-kHandleRadius, kHandleRadius*2, kHandleRadius*2);
+			h->setPen(QPen(Qt::white, 1));
+			h->setBrush(QColor(0, 180, 255));
+			h->setZValue(100);
+			h->setData(0, i);
+			h->setData(1, 0);
+			h->setAcceptHoverEvents(true);
+			m_scene->addItem(h);
+			shape->handles.append(h);
+		}
+
+		// 外接矩形（旋转后椭圆外接的轴对齐矩形）
+		// 椭圆旋转角度 ang 后，AABB 的 x 和 y 半范围：
+		// hw = sqrt((r1*cos)? + (r2*sin)?), hh = sqrt((r1*sin)? + (r2*cos)?)
+		double r1 = shape->ellipse.r1, r2 = shape->ellipse.r2;
+		double rad = qDegreesToRadians(angle);
+		double cosA = qCos(rad), sinA = qSin(rad);
+		double hw = std::sqrt(r1*r1*cosA*cosA + r2*r2*sinA*sinA);
+		double hh = std::sqrt(r1*r1*sinA*sinA + r2*r2*cosA*cosA);
+		shape->circumRect = new QGraphicsRectItem(cx-hw, cy-hh, hw*2, hh*2);
+		shape->circumRect->setZValue(75);
+		QPen circumPen(QColor(160,160,160), 1, Qt::DashLine);
+		circumPen.setCosmetic(true);
+		shape->circumRect->setPen(circumPen);
+		shape->circumRect->setBrush(Qt::NoBrush);
+		m_scene->addItem(shape->circumRect);
+
+		// 旋转手柄（上边中点上方）
+		double mx = 0 * qCos(rad) - (-r2) * qSin(rad);
+		double my = 0 * qSin(rad) + (-r2) * qCos(rad);
+		QPointF midTop(mx + cx, my + cy);
+		double stickLen = 30.0;
+		QPointF rotPt(midTop.x() + qSin(rad)*stickLen, midTop.y() - qCos(rad)*stickLen);
+
+		shape->rotateStickLine = new QGraphicsLineItem(midTop.x(), midTop.y(), rotPt.x(), rotPt.y());
+		QPen stickPen(QColor(220,220,220), 1);
+		stickPen.setCosmetic(true);
+		shape->rotateStickLine->setPen(stickPen);
+		shape->rotateStickLine->setZValue(95);
+		m_scene->addItem(shape->rotateStickLine);
+
+		shape->rotateHandle = new QGraphicsEllipseItem(rotPt.x()-kHandleRadius, rotPt.y()-kHandleRadius, kHandleRadius*2, kHandleRadius*2);
+		shape->rotateHandle->setPen(QPen(QColor(255,200,0), 2));
+		shape->rotateHandle->setBrush(QColor(255,180,0));
+		shape->rotateHandle->setZValue(100);
+		shape->rotateHandle->setData(0, 0);
+		shape->rotateHandle->setData(1, 1);
+		shape->rotateHandle->setAcceptHoverEvents(true);
+		m_scene->addItem(shape->rotateHandle);
 	}
 	else if (isRotatedRect)
 	{
@@ -1333,6 +1469,56 @@ void ImageCanvasView::updateHandlePositions(DrawShapeItem* shape)
 		if (shape->centerCrossH) shape->centerCrossH->setLine(cx-kCrossLen, cy, cx+kCrossLen, cy);
 		if (shape->centerCrossV) shape->centerCrossV->setLine(cx, cy-kCrossLen, cx, cy+kCrossLen);
 	}
+	else if (shape->type == Shape_Ellipse)
+	{
+		double cx = shape->ellipse.cx, cy = shape->ellipse.cy;
+		double r1 = shape->ellipse.r1, r2 = shape->ellipse.r2;
+		double rad = qDegreesToRadians(shape->ellipse.angle);
+
+		// 4 个控制点
+		QPointF localPts[4] = { {r1,0},{0,-r2},{-r1,0},{0,r2} };
+		for (int i = 0; i < 4 && i < shape->handles.size(); ++i)
+		{
+			double rx = localPts[i].x() * qCos(rad) - localPts[i].y() * qSin(rad);
+			double ry = localPts[i].x() * qSin(rad) + localPts[i].y() * qCos(rad);
+			moveHandle(shape->handles[i], QPointF(rx+cx, ry+cy));
+		}
+
+		// 旋转手柄
+		if (shape->rotateHandle)
+		{
+			double mx = 0 * qCos(rad) - (-r2) * qSin(rad);
+			double my = 0 * qSin(rad) + (-r2) * qCos(rad);
+			QPointF midTop(mx+cx, my+cy);
+			double stickLen = 30.0;
+			QPointF rotPt(midTop.x() + qSin(rad)*stickLen, midTop.y() - qCos(rad)*stickLen);
+			moveHandle(shape->rotateHandle, rotPt);
+			if (shape->rotateStickLine)
+				shape->rotateStickLine->setLine(midTop.x(), midTop.y(), rotPt.x(), rotPt.y());
+		}
+
+		// 外接矩形
+		if (shape->circumRect)
+		{
+			double cosA = qCos(rad), sinA = qSin(rad);
+			double hw = std::sqrt(r1*r1*cosA*cosA + r2*r2*sinA*sinA);
+			double hh = std::sqrt(r1*r1*sinA*sinA + r2*r2*cosA*cosA);
+			shape->circumRect->setRect(cx-hw, cy-hh, hw*2, hh*2);
+		}
+
+		// item
+		if (auto* p = dynamic_cast<QGraphicsPathItem*>(shape->item))
+		{
+			QPainterPath path;
+			path.addEllipse(QPointF(0,0), r1, r2);
+			QTransform t;
+			t.translate(cx, cy);
+			t.rotate(shape->ellipse.angle);
+			p->setPath(t.map(path));
+		}
+		if (shape->centerCrossH) shape->centerCrossH->setLine(cx-kCrossLen, cy, cx+kCrossLen, cy);
+		if (shape->centerCrossV) shape->centerCrossV->setLine(cx, cy-kCrossLen, cx, cy+kCrossLen);
+	}
 	else if (shape->type == Shape_RotateRect)
 	{
 		double cx = shape->rotatedRect.cx, cy = shape->rotatedRect.cy;
@@ -1407,6 +1593,17 @@ bool ImageCanvasView::isPointInShape(const DrawShapeItem* shape, const QPointF& 
 		double d2 = (scenePos.x()-shape->circle.cx)*(scenePos.x()-shape->circle.cx)
 		          + (scenePos.y()-shape->circle.cy)*(scenePos.y()-shape->circle.cy);
 		return d2 <= shape->circle.r * shape->circle.r;
+	}
+	case Shape_Ellipse:
+	{
+		double rad = -qDegreesToRadians(shape->ellipse.angle);
+		double dx  = scenePos.x() - shape->ellipse.cx;
+		double dy  = scenePos.y() - shape->ellipse.cy;
+		double lx  = dx * qCos(rad) - dy * qSin(rad);
+		double ly  = dx * qSin(rad) + dy * qCos(rad);
+		double r1  = shape->ellipse.r1;
+		double r2  = shape->ellipse.r2;
+		return (lx*lx)/(r1*r1) + (ly*ly)/(r2*r2) <= 1.0;
 	}
 	default: return false;
 	}
@@ -1570,6 +1767,51 @@ void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
 	m_dragShape->circle.cx = cx0;
 	m_dragShape->circle.cy = cy0;
 	m_dragShape->circle.r  = newR;
+
+	updateHandlePositions(m_dragShape);
+}
+
+// ===== 椭圆 Handle 拖拽 =====
+void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
+{
+	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 4) return;
+
+	if (m_isRotating)
+	{
+		// 旋转手柄 → 计算角度
+		double cx = m_dragShape->ellipse.cx;
+		double cy = m_dragShape->ellipse.cy;
+		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
+		m_dragShape->ellipse.angle = angle;
+		updateHandlePositions(m_dragShape);
+		return;
+	}
+
+	// 普通控制点拖拽：先转回局部坐标系
+	double angle = m_dragShape->ellipse.angle;
+	double rad   = -qDegreesToRadians(angle);
+	double dx    = scenePos.x() - m_dragStartRect.cx;
+	double dy    = scenePos.y() - m_dragStartRect.cy;
+	double lx    = dx * qCos(rad) - dy * qSin(rad);
+	double ly    = dx * qSin(rad) + dy * qCos(rad);
+
+	double newR1 = m_dragStartRect.w / 2.0;
+	double newR2 = m_dragStartRect.h / 2.0;
+
+	switch (m_dragHandleIndex)
+	{
+	case 0: newR1 =  lx; break;  // 右
+	case 1: newR2 = -ly; break;  // 上
+	case 2: newR1 = -lx; break;  // 左
+	case 3: newR2 =  ly; break;  // 下
+	}
+	newR1 = std::max(newR1, 1.5);
+	newR2 = std::max(newR2, 1.5);
+
+	m_dragShape->ellipse.cx = m_dragStartRect.cx;
+	m_dragShape->ellipse.cy = m_dragStartRect.cy;
+	m_dragShape->ellipse.r1 = newR1;
+	m_dragShape->ellipse.r2 = newR2;
 
 	updateHandlePositions(m_dragShape);
 }

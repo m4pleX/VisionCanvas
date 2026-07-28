@@ -170,6 +170,7 @@ private:
 	void commitRect();
 	void commitRotatedRect();
 	void commitCircle();
+	void commitEllipse();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
 	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
@@ -183,6 +184,7 @@ private:
 	void updateRectFromHandle(const QPointF& scenePos);
 	void updateRotatedRectFromHandle(const QPointF& scenePos);
 	void updateCircleFromHandle(const QPointF& scenePos);
+	void updateEllipseFromHandle(const QPointF& scenePos);
 	void applyHandleHover(int handleIndex, bool hover);
 	void clearAllHandleHover();
 };
