@@ -51,6 +51,7 @@ struct DrawShapeItem
 	QGraphicsLineItem* centerCrossH = nullptr;
 	QGraphicsLineItem* centerCrossV = nullptr;
 	QGraphicsLineItem* rotateStickLine = nullptr;
+	QGraphicsRectItem* circumRect = nullptr;       // 圆形/椭圆的外接矩形
 
 	struct Rect { double cx = 0, cy = 0, w = 0, h = 0; } rect;
 	struct RotatedRect { double cx = 0, cy = 0, w = 0, h = 0, angle = 0; } rotatedRect;
@@ -139,6 +140,14 @@ private:
 	QPointF m_dragOffset;
 	QPointF m_dragStartCenter;
 
+	// 圆形三点绘制的中间点
+	QPointF m_circlePt1;
+	QPointF m_circlePt2;
+	QGraphicsEllipseItem* m_circleMarker1 = nullptr;  // 点1标记
+	QGraphicsEllipseItem* m_circleMarker2 = nullptr;  // 点2标记
+	QGraphicsEllipseItem* m_ghostEllipse = nullptr;  // 圆形/椭圆的 ghost
+	QGraphicsRectItem* m_ghostCircumRect = nullptr;   // 外接矩形 ghost
+
 	// ---- 方法 ----
 	void clearSceneShape();                        // 清除 scene 上当前形状的所有 item
 	void rebuildShapeOnScene(DrawShapeItem* shape); // 根据数据重绘形状到 scene
@@ -160,6 +169,7 @@ private:
 	void commitShapeGeneric(DrawShapeType type);
 	void commitRect();
 	void commitRotatedRect();
+	void commitCircle();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
 	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
@@ -172,6 +182,7 @@ private:
 
 	void updateRectFromHandle(const QPointF& scenePos);
 	void updateRotatedRectFromHandle(const QPointF& scenePos);
+	void updateCircleFromHandle(const QPointF& scenePos);
 	void applyHandleHover(int handleIndex, bool hover);
 	void clearAllHandleHover();
 };
