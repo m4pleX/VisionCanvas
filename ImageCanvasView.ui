@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ImageCanvasViewClass</class>
+ <widget class="QMainWindow" name="ImageCanvasViewClass">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1536</width>
+    <height>832</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::NoFocus</enum>
+  </property>
+  <property name="windowTitle">
+   <string>ImageCanvasView</string>
+  </property>
+  <property name="layoutDirection">
+   <enum>Qt::LeftToRight</enum>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="17,6">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SetDefaultConstraint</enum>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QGroupBox" name="groupBox_L">
+        <property name="title">
+         <string/>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="10,3,63">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QGroupBox" name="groupBox">
+           <property name="styleSheet">
+            <string notr="true">QWidget{
+    background-color: #f7f8fa;
+    padding: 8px;
+}</string>
+           </property>
+           <property name="title">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="group_toolbar">
+           <property name="title">
+            <string/>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QPushButton" name="tool_btn_zoom_in">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>放大</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tool_btn_zoom_out">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>缩小</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tool_btn_zoom_reset">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>100%缩放</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tool_btn_zoom_fit">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>自适应缩放</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="info_lab_scale_ratio">
+              <property name="styleSheet">
+               <string notr="true">QLabel{
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    color: #212529;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 0 16px;
+    min-height: 28px;
+    min-width: 140px;
+    qproperty-alignment: AlignCenter;
+}</string>
+              </property>
+              <property name="lineWidth">
+               <number>5</number>
+              </property>
+              <property name="text">
+               <string>100%</string>
+              </property>
+              <property name="textFormat">
+               <enum>Qt::AutoText</enum>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tool_btn_toggle_cross">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>1</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>显示十字线</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tool_btn_toggle_line_width">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>线粗/细</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="info_lab_resolution">
+              <property name="styleSheet">
+               <string notr="true">QLabel{
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    color: #495057;
+    font-size: 13px;
+    padding: 0 10px;
+    min-height: 26px;
+    qproperty-alignment: AlignCenter;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>(1280,960)</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_3">
+           <property name="title">
+            <string/>
+           </property>
+           <layout class="QGridLayout" name="gridLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QGraphicsView" name="canvas_view_main"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_R">
+        <property name="styleSheet">
+         <string notr="true">QWidgetl{
+    background-color: #f7f8fa;
+    padding: 8px;
+}</string>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3" stretch="13,63">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QGroupBox" name="groupBox_4">
+           <property name="styleSheet">
+            <string notr="true">QWidget{
+    background-color: #f7f8fa;
+    padding: 8px;
+}</string>
+           </property>
+           <property name="title">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="group_draw_opt">
+           <property name="styleSheet">
+            <string notr="true">QWidget{
+    background-color: #f7f8fa;
+    padding: 8px;
+}</string>
+           </property>
+           <property name="title">
+            <string/>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_4">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <item>
+               <widget class="QPushButton" name="draw_btn_load_image">
+                <property name="styleSheet">
+                 <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    min-height: 30px;
+    font-size: 14px;
+    color: #1d2939;
+}
+QPushButton:hover{
+    background-color: #eff8ff;
+    border-color: #84b6f4;
+}
+QPushButton:pressed{
+    background-color: #d0e7ff;
+    border-color: #4096ee;
+}
+</string>
+                </property>
+                <property name="text">
+                 <string>读取图片</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QComboBox" name="draw_cbox_shape_type">
+                <property name="styleSheet">
+                 <string notr="true">QComboBox {
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    /* 左右内边距统一，右侧给箭头留出空间 */
+    padding-left: 12px;
+    padding-right: 36px;
+    min-height: 30px;
+    background: white;
+}
+QComboBox:hover {
+    border-color: #66afe9;
+}
+</string>
+                </property>
+                <property name="currentText">
+                 <string>选择形状</string>
+                </property>
+                <property name="insertPolicy">
+                 <enum>QComboBox::InsertAtBottom</enum>
+                </property>
+                <property name="sizeAdjustPolicy">
+                 <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>选择形状</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>矩形</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>旋转矩形</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>圆形</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>椭圆</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>圆环</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>圆弧</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>多边形</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="draw_btn_open_param">
+                <property name="styleSheet">
+                 <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    min-height: 30px;
+    font-size: 14px;
+    color: #1d2939;
+}
+QPushButton:hover{
+    background-color: #eff8ff;
+    border-color: #84b6f4;
+}
+QPushButton:pressed{
+    background-color: #d0e7ff;
+    border-color: #4096ee;
+}
+</string>
+                </property>
+                <property name="text">
+                 <string>绘制参数</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_reset_rect">
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    min-height: 30px;
+    font-size: 14px;
+    color: #1d2939;
+}
+QPushButton:hover{
+    background-color: #eff8ff;
+    border-color: #84b6f4;
+}
+QPushButton:pressed{
+    background-color: #d0e7ff;
+    border-color: #4096ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>复位</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Expanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>30</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources>
+  <include location="ImageCanvasView.qrc"/>
+ </resources>
+ <connections/>
+</ui>
