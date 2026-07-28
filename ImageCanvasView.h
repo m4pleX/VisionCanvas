@@ -17,7 +17,7 @@ class QPushButton;
 static const double kHandleRadius = 4.0;
 static const double kCrossLen = 6.0;
 
-// 控制点 hover（用 friend 或全局内联）
+// 控制点 hover
 inline void setHandleHover(QGraphicsEllipseItem* h, bool hover) {
 	QPointF c = h->rect().center();
 	double r = hover ? kHandleRadius + 2 : kHandleRadius;
@@ -31,50 +31,42 @@ inline void moveHandle(QGraphicsEllipseItem* h, const QPointF& center) {
 	           kHandleRadius * 2, kHandleRadius * 2);
 }
 
+enum DrawShapeType
+{
+	Shape_Rect,
+	Shape_RotateRect,
+	Shape_Circle,
+	Shape_Ellipse,
+	Shape_Ring,
+	Shape_Arc,
+	Shape_Polygon
+};
+
+struct DrawShapeItem
+{
+	DrawShapeType type;
+	QGraphicsItem* item = nullptr;
+	QList<QGraphicsEllipseItem*> handles;
+	QGraphicsEllipseItem* rotateHandle = nullptr;
+	QGraphicsLineItem* centerCrossH = nullptr;
+	QGraphicsLineItem* centerCrossV = nullptr;
+	QGraphicsLineItem* rotateStickLine = nullptr;
+
+	struct Rect { double cx = 0, cy = 0, w = 0, h = 0; } rect;
+	struct RotatedRect { double cx = 0, cy = 0, w = 0, h = 0, angle = 0; } rotatedRect;
+	struct Circle { double cx = 0, cy = 0, r = 0; } circle;
+	struct Ellipse { double cx = 0, cy = 0, r1 = 0, r2 = 0, angle = 0; } ellipse;
+	struct Ring { double cx = 0, cy = 0, rOuter = 0, rInner = 0; } ring;
+	struct Arc { double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0; } arc;
+	struct Polygon { QList<QPointF> pts; } polygon;
+
+	explicit DrawShapeItem(DrawShapeType t) : type(t) {}
+};
+
+
 class ImageCanvasView : public QMainWindow
 {
 	Q_OBJECT
-
-public:
-	enum DrawShapeType
-	{
-		Shape_Rect,
-		Shape_RotateRect,
-		Shape_Circle,
-		Shape_Ellipse,
-		Shape_Ring,
-		Shape_Arc,
-		Shape_Polygon
-	};
-
-	enum ShapeState
-	{
-		ShapeState_Normal,
-		ShapeState_Hover,
-		ShapeState_Selected,
-		ShapeState_Hidden
-	};
-
-	struct DrawShapeItem
-	{
-		DrawShapeType type;
-		QGraphicsItem* item = nullptr;
-		ShapeState state = ShapeState_Normal;
-		QList<QGraphicsEllipseItem*> handles;
-		QGraphicsEllipseItem* rotateHandle = nullptr;
-		QGraphicsLineItem* centerCrossH = nullptr;
-		QGraphicsLineItem* centerCrossV = nullptr;
-
-		struct Rect { double cx = 0, cy = 0, w = 0, h = 0; } rect;
-		struct RotatedRect { double cx = 0, cy = 0, w = 0, h = 0, angle = 0; } rotatedRect;
-		struct Circle { double cx = 0, cy = 0, r = 0; } circle;
-		struct Ellipse { double cx = 0, cy = 0, r1 = 0, r2 = 0, angle = 0; } ellipse;
-		struct Ring { double cx = 0, cy = 0, rOuter = 0, rInner = 0; } ring;
-		struct Arc { double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0; } arc;
-		struct Polygon { QList<QPointF> pts; } polygon;
-
-		explicit DrawShapeItem(DrawShapeType t) : type(t) {}
-	};
 
 public:
 	ImageCanvasView(QWidget* parent = nullptr);
@@ -112,21 +104,20 @@ private:
 	QPushButton* m_btnCancelDraw = nullptr;
 
 	QWidget* m_paramPanel = nullptr;
-	QDoubleSpinBox* m_paramSpin[4] = {};
-	QLabel* m_paramLabel[4] = {};
+	QVBoxLayout* m_paramContentLayout = nullptr;
+	QList<QDoubleSpinBox*> m_paramSpins;
+	QList<QLabel*> m_paramLabels;
 
 	QLabel* m_infoLabel = nullptr;
 
 	QList<DrawShapeItem*> m_shapes;
 	DrawShapeType m_currentShape = Shape_Rect;
-	DrawShapeItem* m_selectedShape = nullptr;
-	DrawShapeItem* m_hoverShape = nullptr;
+	DrawShapeItem* m_activeShape = nullptr;  // 当前选中/显示的形状（scene 上唯一）
 	int m_activeShapeIndex = -1;
 
 	// 样式
-	QColor m_colorNormal   = QColor(0, 200, 0);    // 绿色
-	QColor m_colorHover    = QColor(0, 120, 255);  // 蓝色
-	QColor m_colorSelected = QColor(0, 120, 255);  // 蓝色
+	QColor m_colorNormal   = QColor(0, 200, 0);
+	QColor m_colorSelected = QColor(0, 120, 255);
 	double m_penWidth = 2.0;
 	bool m_thinLine = false;
 
@@ -138,15 +129,21 @@ private:
 	QGraphicsRectItem* m_ghostRect = nullptr;
 
 	bool m_isDraggingHandle = false;
+	bool m_isRotating = false;
 	DrawShapeItem* m_dragShape = nullptr;
 	int m_dragHandleIndex = -1;
+	double m_dragStartAngle = 0;
 	DrawShapeItem::Rect m_dragStartRect;
 
 	bool m_isDraggingShape = false;
 	QPointF m_dragOffset;
 	QPointF m_dragStartCenter;
 
-	// 方法
+	// ---- 方法 ----
+	void clearSceneShape();                        // 清除 scene 上当前形状的所有 item
+	void rebuildShapeOnScene(DrawShapeItem* shape); // 根据数据重绘形状到 scene
+	void applyStyle(DrawShapeItem* shape);          // 给 shape->item 上色
+
 	void showDrawModeOverlay();
 	void hideDrawModeOverlay();
 	void updateScaleUI();
@@ -160,27 +157,21 @@ private:
 	void startDraw(DrawShapeType type);
 	void stopDraw();
 	void updateGhostRect(const QPointF& scenePos);
-	void commitRect();
 	void commitShapeGeneric(DrawShapeType type);
+	void commitRect();
+	void commitRotatedRect();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
-	void setAllShapesVisible(bool visible);
-	void showOnlyShape(DrawShapeType type);
-
 	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
-	void applyShapeStateStyle(DrawShapeItem* shape);
 
 	void showHandles(DrawShapeItem* shape);
 	void updateHandlePositions(DrawShapeItem* shape);
-	void hideAllHandles();
 
-	void deselectAll();
 	bool isPointInShape(const DrawShapeItem* shape, const QPointF& scenePos) const;
-	DrawShapeItem* shapeAt(const QPointF& scenePos) const;
 	QGraphicsEllipseItem* handleAt(const QPointF& scenePos) const;
-	void setShapeState(DrawShapeItem* shape, ShapeState state);
 
 	void updateRectFromHandle(const QPointF& scenePos);
+	void updateRotatedRectFromHandle(const QPointF& scenePos);
 	void applyHandleHover(int handleIndex, bool hover);
 	void clearAllHandleHover();
 };
