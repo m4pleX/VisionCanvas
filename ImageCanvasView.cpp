@@ -615,7 +615,13 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		{
 			if (m_activeShape)
 			{
-				if (m_activeShape->type == Shape_RotateRect)
+				if (m_activeShape->type == Shape_Rect)
+				{
+					m_activeShape->rect.cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->rect.cy = scenePos.y() - m_dragOffset.y();
+					syncParamPanel(m_activeShape);
+				}
+				else if (m_activeShape->type == Shape_RotateRect)
 				{
 					m_activeShape->rotatedRect.cx = scenePos.x() - m_dragOffset.x();
 					m_activeShape->rotatedRect.cy = scenePos.y() - m_dragOffset.y();
@@ -1228,6 +1234,12 @@ void ImageCanvasView::showParamPanel()
 		spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
 		spin->setFixedWidth(120);
 		spin->setValue(paramVals[i]);
+		spin->setKeyboardTracking(false);
+		connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](){
+			int idx=ui.draw_cbox_shape_type->currentIndex();if(idx<=0)return;
+			DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
+			if(s)liveApplyParam(s);
+		});
 		m_paramSpins.append(spin);
 
 		row->addWidget(label);
@@ -1242,6 +1254,50 @@ void ImageCanvasView::showParamPanel()
 
 void ImageCanvasView::hideParamPanel() { if (m_paramPanel) m_paramPanel->hide(); }
 
+// 拖拽过程中实时刷新参数面板数值
+void ImageCanvasView::syncParamPanel(DrawShapeItem* shape)
+{
+	if(!m_paramPanel||m_paramPanel->isHidden()||!shape)return;
+	switch(shape->type){
+	case Shape_Rect: case Shape_RotateRect:
+		if(m_paramSpins.size()>=4){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[0]->setValue(shape->rect.cx);m_paramSpins[1]->setValue(shape->rect.cy);m_paramSpins[2]->setValue(shape->rect.w);m_paramSpins[3]->setValue(shape->rect.h);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);}break;
+	default:break;
+	}
+}
+
+// 从参数面板读取值应用到 shape，不关闭面板
+void ImageCanvasView::liveApplyParam(DrawShapeItem* shape)
+{
+	if(!shape||m_paramSpins.isEmpty())return;
+	int n=m_paramSpins.size();
+	switch(shape->type){
+	case Shape_Rect:
+		if(n>=4){shape->rect.cx=m_paramSpins[0]->value();shape->rect.cy=m_paramSpins[1]->value();shape->rect.w=m_paramSpins[2]->value();shape->rect.h=m_paramSpins[3]->value();}break;
+	case Shape_RotateRect:
+		if(n>=5){shape->rotatedRect.cx=m_paramSpins[0]->value();shape->rotatedRect.cy=m_paramSpins[1]->value();shape->rotatedRect.w=m_paramSpins[2]->value();shape->rotatedRect.h=m_paramSpins[3]->value();shape->rotatedRect.angle=m_paramSpins[4]->value();}break;
+	case Shape_Circle:
+		if(n>=3){shape->circle.cx=m_paramSpins[0]->value();shape->circle.cy=m_paramSpins[1]->value();shape->circle.r=m_paramSpins[2]->value();}break;
+	case Shape_Ellipse:
+		if(n>=5){shape->ellipse.cx=m_paramSpins[0]->value();shape->ellipse.cy=m_paramSpins[1]->value();shape->ellipse.r1=m_paramSpins[2]->value();shape->ellipse.r2=m_paramSpins[3]->value();shape->ellipse.angle=m_paramSpins[4]->value();}break;
+	case Shape_Ring:
+		if(n>=4){shape->ring.cx=m_paramSpins[0]->value();shape->ring.cy=m_paramSpins[1]->value();shape->ring.r1=m_paramSpins[2]->value();shape->ring.r2=m_paramSpins[3]->value();}break;
+	case Shape_Arc:
+		if(n>=6){shape->arc.cx=m_paramSpins[0]->value();shape->arc.cy=m_paramSpins[1]->value();shape->arc.rOuter=m_paramSpins[2]->value();shape->arc.rInner=m_paramSpins[3]->value();shape->arc.startAngle=m_paramSpins[4]->value();shape->arc.r1=m_paramSpins[5]->value();shape->arc.endAngle=shape->arc.startAngle+shape->arc.r1;}break;
+	case Shape_Polygon:{
+		int np=(int)shape->polygon.pts.size();if(n>=np*2)for(int i=0;i<np;++i)shape->polygon.pts[i]=QPointF(m_paramSpins[i*2]->value(),m_paramSpins[i*2+1]->value());}break;
+	default:break;
+	}
+	// 清除旧场景图形再重建（避免重复）
+	if(shape->item){m_scene->removeItem(shape->item);delete shape->item;shape->item=nullptr;}
+	for(auto* h:shape->handles){m_scene->removeItem(h);delete h;}shape->handles.clear();
+	if(shape->rotateHandle){m_scene->removeItem(shape->rotateHandle);delete shape->rotateHandle;shape->rotateHandle=nullptr;}
+	if(shape->rotateStickLine){m_scene->removeItem(shape->rotateStickLine);delete shape->rotateStickLine;shape->rotateStickLine=nullptr;}
+	if(shape->circumRect){m_scene->removeItem(shape->circumRect);delete shape->circumRect;shape->circumRect=nullptr;}
+	if(shape->centerCrossH){m_scene->removeItem(shape->centerCrossH);delete shape->centerCrossH;shape->centerCrossH=nullptr;}
+	if(shape->centerCrossV){m_scene->removeItem(shape->centerCrossV);delete shape->centerCrossV;shape->centerCrossV=nullptr;}
+	rebuildShapeOnScene(shape);
+}
+
 void ImageCanvasView::applyParamAndRedraw()
 {
 	int index = ui.draw_cbox_shape_type->currentIndex();
@@ -1250,40 +1306,10 @@ void ImageCanvasView::applyParamAndRedraw()
 
 	DrawShapeItem* shape = findShapeByType(type);
 	if (!shape) { shape = new DrawShapeItem(type); m_shapes.append(shape); }
-
-	// 清理旧 scene item
 	clearSceneShape();
 	m_activeShape = shape;
 
-	int n = m_paramSpins.size();
-	switch (type)
-	{
-	case Shape_Rect:
-		if (n>=4) { shape->rect.cx = m_paramSpins[0]->value(); shape->rect.cy = m_paramSpins[1]->value(); shape->rect.w = m_paramSpins[2]->value(); shape->rect.h = m_paramSpins[3]->value(); }
-		break;
-	case Shape_RotateRect:
-		if (n>=5) { shape->rotatedRect.cx = m_paramSpins[0]->value(); shape->rotatedRect.cy = m_paramSpins[1]->value(); shape->rotatedRect.w = m_paramSpins[2]->value(); shape->rotatedRect.h = m_paramSpins[3]->value(); shape->rotatedRect.angle = m_paramSpins[4]->value(); }
-		break;
-	case Shape_Circle:
-		if (n>=3) { shape->circle.cx = m_paramSpins[0]->value(); shape->circle.cy = m_paramSpins[1]->value(); shape->circle.r = m_paramSpins[2]->value(); }
-		break;
-	case Shape_Ellipse:
-		if (n>=5) { shape->ellipse.cx = m_paramSpins[0]->value(); shape->ellipse.cy = m_paramSpins[1]->value(); shape->ellipse.r1 = m_paramSpins[2]->value(); shape->ellipse.r2 = m_paramSpins[3]->value(); shape->ellipse.angle = m_paramSpins[4]->value(); }
-		break;
-	case Shape_Ring:
-		if (n>=4) { shape->ring.cx = m_paramSpins[0]->value(); shape->ring.cy = m_paramSpins[1]->value(); shape->ring.r1 = m_paramSpins[2]->value(); shape->ring.r2 = m_paramSpins[3]->value(); }
-		break;
-	case Shape_Arc:
-		if(n>=6){shape->arc.cx=m_paramSpins[0]->value();shape->arc.cy=m_paramSpins[1]->value();shape->arc.rOuter=m_paramSpins[2]->value();shape->arc.rInner=m_paramSpins[3]->value();shape->arc.startAngle=m_paramSpins[4]->value();shape->arc.r1=m_paramSpins[5]->value();shape->arc.endAngle=shape->arc.startAngle+shape->arc.r1;}break;
-	case Shape_Polygon:
-		{
-			int np=(int)shape->polygon.pts.size();
-			if(n>=np*2)for(int i=0;i<np;++i)shape->polygon.pts[i]=QPointF(m_paramSpins[i*2]->value(),m_paramSpins[i*2+1]->value());
-		}break;
-	default: break;
-	}
-
-	rebuildShapeOnScene(shape);
+	liveApplyParam(shape);
 	hideParamPanel();
 }
 
@@ -2244,6 +2270,7 @@ void ImageCanvasView::updateRectFromHandle(const QPointF& scenePos)
 	h  = std::max(bottom-top, 3.0);
 
 	updateHandlePositions(m_dragShape);
+	syncParamPanel(m_dragShape);
 }
 
 void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)

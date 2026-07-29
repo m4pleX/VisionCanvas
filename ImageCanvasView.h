@@ -180,6 +180,8 @@ private:
 	void showParamPanel();
 	void hideParamPanel();
 	void applyParamAndRedraw();
+	void liveApplyParam(DrawShapeItem* shape);
+	void syncParamPanel(DrawShapeItem* shape);
 
 	void startDraw(DrawShapeType type);
 	void stopDraw();
