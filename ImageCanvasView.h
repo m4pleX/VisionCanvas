@@ -161,6 +161,11 @@ private:
 	double m_arcStartAngle = 0;
 	double m_arcEndAngle = 0;
 
+	// 多边形绘制暂存
+	QList<QPointF> m_tempPolyPts;
+	QList<QGraphicsEllipseItem*> m_circleMarkers;
+	QGraphicsLineItem* m_ghostPolyLine = nullptr;
+
 	// ---- 方法 ----
 	void clearSceneShape();                        // 清除 scene 上当前形状的所有 item
 	void rebuildShapeOnScene(DrawShapeItem* shape); // 根据数据重绘形状到 scene
@@ -186,6 +191,7 @@ private:
 	void commitEllipse();
 	void commitRing();
 	void commitArc();
+	void commitPolygon();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
 	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
@@ -202,6 +208,7 @@ private:
 	void updateEllipseFromHandle(const QPointF& scenePos);
 	void updateRingFromHandle(const QPointF& scenePos);
 	void updateArcFromHandle(const QPointF& scenePos);
+	void updatePolygonFromHandle(const QPointF& scenePos);
 	void applyHandleHover(int handleIndex, bool hover);
 	void clearAllHandleHover();
 };

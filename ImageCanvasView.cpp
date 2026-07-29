@@ -258,6 +258,53 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			return false;
 		}
 
+		// ===== 多边形 =====
+		if (m_currentShape == Shape_Polygon)
+		{
+			if (event->type() == QEvent::MouseButtonPress)
+			{
+				QMouseEvent* me = static_cast<QMouseEvent*>(event);
+				if (me->button() == Qt::LeftButton) {
+					// 点击第一个顶点附近且 ≥3 点 → 闭合
+					if (m_tempPolyPts.size() >= 3) {
+						QPointF d = scenePos - m_tempPolyPts.first();
+						if (std::sqrt(d.x()*d.x()+d.y()*d.y()) < 10.0) {
+							commitPolygon(); event->accept(); return true;
+						}
+					}
+					m_tempPolyPts.append(scenePos);
+					double mrkR = 3.0;
+					auto* mk = new QGraphicsEllipseItem(scenePos.x()-mrkR,scenePos.y()-mrkR,mrkR*2,mrkR*2);
+					mk->setPen(Qt::NoPen);mk->setBrush(QColor(255,80,80));mk->setZValue(100);m_scene->addItem(mk);m_circleMarkers.append(mk);
+					m_drawStep = 1;
+				}
+				event->accept(); return true;
+			}
+			else if (event->type() == QEvent::MouseMove && m_drawStep == 1 && m_tempPolyPts.size() >= 1)
+			{
+				// 已绘边预览
+				if (!m_ghostArcPath) { m_ghostArcPath=new QGraphicsPathItem(); QPen pen(QColor(0,180,255),m_penWidth,Qt::DashLine); pen.setCosmetic(true); m_ghostArcPath->setPen(pen); m_ghostArcPath->setZValue(99); m_scene->addItem(m_ghostArcPath); }
+				QPainterPath edges; edges.moveTo(m_tempPolyPts.first());
+				for(int i=1;i<m_tempPolyPts.size();++i) edges.lineTo(m_tempPolyPts[i]);
+				edges.lineTo(scenePos);
+				m_ghostArcPath->setPath(edges);
+
+				// 靠近起点时高亮闭合线
+				QPointF d = scenePos - m_tempPolyPts.first();
+				double dist = std::sqrt(d.x()*d.x()+d.y()*d.y());
+				if (m_ghostPolyLine) { m_ghostPolyLine->setVisible(dist < 15.0 && m_tempPolyPts.size()>=3); }
+				else if (dist < 15.0 && m_tempPolyPts.size()>=3) {
+					m_ghostPolyLine = new QGraphicsLineItem(); QPen p(QColor(255,200,0),m_penWidth+1,Qt::DashLine); p.setCosmetic(true);
+					m_ghostPolyLine->setPen(p); m_ghostPolyLine->setZValue(100); m_scene->addItem(m_ghostPolyLine);
+				}
+				if (m_ghostPolyLine && m_ghostPolyLine->isVisible())
+					m_ghostPolyLine->setLine(QLineF(m_tempPolyPts.last(), m_tempPolyPts.first()));
+
+				event->accept(); return true;
+			}
+			return false;
+		}
+
 		if (m_currentShape == Shape_Circle || m_currentShape == Shape_Ring)
 		{
 			// 圆环：四点构造，前三点确定圆（同圆形），第四点决定另一个圆的半径
@@ -554,10 +601,12 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					updateEllipseFromHandle(scenePos);
 				else if (m_dragShape && m_dragShape->type == Shape_Ring)
 					updateRingFromHandle(scenePos);
-				else if (m_dragShape && m_dragShape->type == Shape_Arc)
-					updateArcFromHandle(scenePos);
-				else
-					updateRectFromHandle(scenePos);
+			else if (m_dragShape && m_dragShape->type == Shape_Arc)
+				updateArcFromHandle(scenePos);
+			else if (m_dragShape && m_dragShape->type == Shape_Polygon)
+				updatePolygonFromHandle(scenePos);
+			else
+				updateRectFromHandle(scenePos);
 				event->accept();
 				return true;
 			}
@@ -590,6 +639,12 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				{
 					m_activeShape->arc.cx = scenePos.x() - m_dragOffset.x();
 					m_activeShape->arc.cy = scenePos.y() - m_dragOffset.y();
+				}
+				else if (m_activeShape->type == Shape_Polygon)
+				{
+					double dx = scenePos.x() - m_dragOffset.x() - m_activeShape->polygon.pts[0].x();
+					double dy = scenePos.y() - m_dragOffset.y() - m_activeShape->polygon.pts[0].y();
+					for(auto& pt:m_activeShape->polygon.pts){pt.rx()+=dx;pt.ry()+=dy;}
 				}
 				else
 				{
@@ -653,6 +708,10 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					m_dragStartRect = { m_activeShape->arc.cx, m_activeShape->arc.cy,
 					                    m_activeShape->arc.startAngle, m_activeShape->arc.endAngle };
 				}
+				else if (m_activeShape->type == Shape_Polygon)
+				{
+					m_dragStartRect = { 0,0,0,0 };
+				}
 					else
 						m_dragStartRect = m_activeShape->rect;
 						clearAllHandleHover();
@@ -682,6 +741,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			else if (m_activeShape->type == Shape_Arc)
 				m_dragOffset = QPointF(scenePos.x() - m_activeShape->arc.cx,
 				                       scenePos.y() - m_activeShape->arc.cy);
+			else if (m_activeShape->type == Shape_Polygon)
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->polygon.pts[0].x(),
+				                       scenePos.y() - m_activeShape->polygon.pts[0].y());
 			else
 				m_dragOffset = QPointF(scenePos.x() - m_activeShape->rect.cx,
 				                       scenePos.y() - m_activeShape->rect.cy);
@@ -1049,6 +1111,9 @@ void ImageCanvasView::showParamPanel()
 	case Shape_Arc:
 		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半径1") << QStringLiteral("半径2") << QStringLiteral("起始角") << QStringLiteral("跨度");
 		count = 6; break;
+	case Shape_Polygon:
+		// 动态：根据实际顶点数生成参数，在下面处理
+		count = 0; break;
 	default:
 		paramNames << QStringLiteral("暂无参数");
 		count = 0;
@@ -1082,6 +1147,14 @@ void ImageCanvasView::showParamPanel()
 			paramVals[0]=existing->arc.cx; paramVals[1]=existing->arc.cy;
 			paramVals[2]=existing->arc.rOuter; paramVals[3]=existing->arc.rInner;
 			paramVals[4]=existing->arc.startAngle; paramVals[5]=existing->arc.r1;
+			break;
+		case Shape_Polygon:
+			// 动态生成每个顶点的 X, Y 参数
+			{
+				int np=existing->polygon.pts.size();paramNames.clear();paramVals.clear();
+				for(int i=0;i<np;++i){paramNames<<QStringLiteral("顶点")+QString::number(i)+QStringLiteral(" X")<<QStringLiteral("顶点")+QString::number(i)+QStringLiteral(" Y");paramVals<<existing->polygon.pts[i].x()<<existing->polygon.pts[i].y();}
+				count=paramNames.size();
+			}
 			break;
 		default: break;
 		}
@@ -1202,6 +1275,11 @@ void ImageCanvasView::applyParamAndRedraw()
 		break;
 	case Shape_Arc:
 		if(n>=6){shape->arc.cx=m_paramSpins[0]->value();shape->arc.cy=m_paramSpins[1]->value();shape->arc.rOuter=m_paramSpins[2]->value();shape->arc.rInner=m_paramSpins[3]->value();shape->arc.startAngle=m_paramSpins[4]->value();shape->arc.r1=m_paramSpins[5]->value();shape->arc.endAngle=shape->arc.startAngle+shape->arc.r1;}break;
+	case Shape_Polygon:
+		{
+			int np=(int)shape->polygon.pts.size();
+			if(n>=np*2)for(int i=0;i<np;++i)shape->polygon.pts[i]=QPointF(m_paramSpins[i*2]->value(),m_paramSpins[i*2+1]->value());
+		}break;
 	default: break;
 	}
 
@@ -1341,6 +1419,26 @@ void ImageCanvasView::commitArc()
 	clearSceneShape();m_activeShape=shape;rebuildShapeOnScene(shape);
 }
 
+// ===== 多边形提交 =====
+void ImageCanvasView::commitPolygon()
+{
+	if(m_tempPolyPts.size()<3)return;
+	DrawShapeItem* shape=findShapeByType(Shape_Polygon);
+	if(!shape){shape=new DrawShapeItem(Shape_Polygon);m_shapes.append(shape);}
+	shape->polygon.pts=m_tempPolyPts;
+	// 清理绘制标记
+	for(auto* mk:m_circleMarkers){m_scene->removeItem(mk);delete mk;}
+	m_circleMarkers.clear();
+	if(m_ghostPolyLine){m_scene->removeItem(m_ghostPolyLine);delete m_ghostPolyLine;m_ghostPolyLine=nullptr;}
+	if(m_ghostArcPath){m_scene->removeItem(m_ghostArcPath);delete m_ghostArcPath;m_ghostArcPath=nullptr;}
+	m_tempPolyPts.clear();
+	hideDrawModeOverlay();m_mode=Mode_None;m_drawStep=0;
+	ui.canvas_view_main->setCursor(Qt::ArrowCursor);
+	clearSceneShape();m_activeShape=shape;rebuildShapeOnScene(shape);
+}
+
+
+
 
 
 void ImageCanvasView::commitRect()
@@ -1451,6 +1549,11 @@ QGraphicsItem* ImageCanvasView::buildShapeItem(const DrawShapeItem& shape)
 		item = e;
 		break;
 	}
+	case Shape_Polygon:
+	{
+		QPolygonF poly;for(auto& pt:shape.polygon.pts)poly<<pt;
+		QGraphicsPolygonItem* p=new QGraphicsPolygonItem(poly);p->setZValue(80);item=p;break;
+	}
 	case Shape_Ellipse:
 	{
 		double r1 = shape.ellipse.r1, r2 = shape.ellipse.r2;
@@ -1520,6 +1623,7 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 	bool isEllipse = false;
 	bool isRing = false;
 	bool isArc = false;
+	bool isPolygon = false;
 
 	switch (shape->type)
 	{
@@ -1552,8 +1656,11 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 		cx = shape->arc.cx; cy = shape->arc.cy;
 		isArc = true;
 		break;
+	case Shape_Polygon:
+		isPolygon = true;
+		break;
 	}
-	if (!isRing && !isArc && halfW <= 0 && halfH <= 0) return;
+	if (!isRing && !isArc && !isPolygon && halfW <= 0 && halfH <= 0) return;
 
 	if (isCircle)
 	{
@@ -1652,6 +1759,14 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 		double rRot=std::max(rO,rI),sL=30.0;QPointF omP(cx+rRot*qCos(midR),cy+rRot*qSin(midR)),rotP(cx+(rRot+sL)*qCos(midR),cy+(rRot+sL)*qSin(midR));
 		shape->rotateStickLine=new QGraphicsLineItem(omP.x(),omP.y(),rotP.x(),rotP.y());QPen sP(QColor(220,220,220),1);sP.setCosmetic(true);shape->rotateStickLine->setPen(sP);shape->rotateStickLine->setZValue(95);m_scene->addItem(shape->rotateStickLine);
 		shape->rotateHandle=new QGraphicsEllipseItem(rotP.x()-kHandleRadius,rotP.y()-kHandleRadius,kHandleRadius*2,kHandleRadius*2);shape->rotateHandle->setPen(QPen(QColor(255,200,0),2));shape->rotateHandle->setBrush(QColor(255,180,0));shape->rotateHandle->setZValue(100);shape->rotateHandle->setData(0,0);shape->rotateHandle->setData(1,1);shape->rotateHandle->setAcceptHoverEvents(true);m_scene->addItem(shape->rotateHandle);
+	}
+	else if (shape->type == Shape_Polygon)
+	{
+		auto& pts=shape->polygon.pts;for(int i=0;i<pts.size();++i){
+			auto* h=new QGraphicsEllipseItem(pts[i].x()-kHandleRadius,pts[i].y()-kHandleRadius,kHandleRadius*2,kHandleRadius*2);
+			h->setPen(QPen(Qt::white,1));h->setBrush(QColor(0,180,255));h->setZValue(100);h->setData(0,i);h->setData(1,0);h->setAcceptHoverEvents(true);
+			m_scene->addItem(h);shape->handles.append(h);
+		}
 	}
 	else if (isEllipse)
 	{
@@ -1893,6 +2008,14 @@ void ImageCanvasView::updateHandlePositions(DrawShapeItem* shape)
 			ph.closeSubpath();p->setPath(ph);
 		}
 	}
+	else if (shape->type == Shape_Polygon)
+	{
+		auto& pts=shape->polygon.pts;
+		for(int i=0;i<pts.size()&&i<(int)shape->handles.size();++i)moveHandle(shape->handles[i],pts[i]);
+		if(auto* p=dynamic_cast<QGraphicsPolygonItem*>(shape->item)){
+			QPolygonF poly;for(auto& pt:pts)poly<<pt;p->setPolygon(poly);
+		}
+	}
 	else if (shape->type == Shape_Ellipse)
 	{
 		double cx = shape->ellipse.cx, cy = shape->ellipse.cy;
@@ -2038,6 +2161,11 @@ bool ImageCanvasView::isPointInShape(const DrawShapeItem* shape, const QPointF& 
 		double rel=ang-sa;if(rel<0)rel+=360.0;
 		if(span>=0)return rel<=span;
 		return rel>=360.0+span;  // 顺时针弧：检测"非缺口"范围
+	}
+	case Shape_Polygon:
+	{
+		QPolygonF poly;for(auto& pt:shape->polygon.pts)poly<<pt;
+		return poly.containsPoint(scenePos,Qt::OddEvenFill);
 	}
 	case Shape_Ellipse:
 	{
@@ -2269,6 +2397,14 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 	m_dragShape->ring.cx = cx0;
 	m_dragShape->ring.cy = cy0;
 
+	updateHandlePositions(m_dragShape);
+}
+
+// ===== 多边形 Handle 拖拽 =====
+void ImageCanvasView::updatePolygonFromHandle(const QPointF& scenePos)
+{
+	if(!m_dragShape||m_dragHandleIndex<0||m_dragHandleIndex>=m_dragShape->polygon.pts.size())return;
+	m_dragShape->polygon.pts[m_dragHandleIndex]=scenePos;
 	updateHandlePositions(m_dragShape);
 }
 
