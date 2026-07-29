@@ -58,7 +58,14 @@ struct DrawShapeItem
 	struct Circle { double cx = 0, cy = 0, r = 0; } circle;
 	struct Ellipse { double cx = 0, cy = 0, r1 = 0, r2 = 0, angle = 0; } ellipse;
 	struct Ring { double cx = 0, cy = 0, r1 = 0, r2 = 0; } ring;  // r1, r2 不区分内外，按大小决定
-	struct Arc { double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0; } arc;
+	struct Arc {
+		double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0;
+		// 同心双圆弧字段
+		bool isBiarc = false;
+		double ax = 0, ay = 0, bx = 0, by = 0;
+		double o1x = 0, o1y = 0, r1 = 0, r2 = 0;
+		double px = 0, py = 0;
+	} arc;
 	struct Polygon { QList<QPointF> pts; } polygon;
 
 	explicit DrawShapeItem(DrawShapeType t) : type(t) {}
@@ -147,7 +154,12 @@ private:
 	QGraphicsEllipseItem* m_circleMarker2 = nullptr;  // 点2标记
 	QGraphicsEllipseItem* m_ghostEllipse = nullptr;  // 圆形/椭圆的 ghost
 	QGraphicsEllipseItem* m_ghostEllipse2 = nullptr;  // ring 的内圆 ghost
+	QGraphicsPathItem*   m_ghostArcPath = nullptr;    // 双圆弧预览 path
 	QGraphicsRectItem* m_ghostCircumRect = nullptr;   // 外接矩形 ghost
+
+	// Arc 绘制暂存
+	double m_arcStartAngle = 0;
+	double m_arcEndAngle = 0;
 
 	// ---- 方法 ----
 	void clearSceneShape();                        // 清除 scene 上当前形状的所有 item
@@ -173,6 +185,7 @@ private:
 	void commitCircle();
 	void commitEllipse();
 	void commitRing();
+	void commitArc();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
 	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
@@ -188,6 +201,7 @@ private:
 	void updateCircleFromHandle(const QPointF& scenePos);
 	void updateEllipseFromHandle(const QPointF& scenePos);
 	void updateRingFromHandle(const QPointF& scenePos);
+	void updateArcFromHandle(const QPointF& scenePos);
 	void applyHandleHover(int handleIndex, bool hover);
 	void clearAllHandleHover();
 };
