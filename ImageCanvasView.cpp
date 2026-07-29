@@ -180,8 +180,8 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		// ===== 绘制模式 =====
 		if (m_mode == Mode_Draw)
 		{
-		// ===== 同心双圆弧 Arc =====
-		// ===== 三点定弧 Arc =====
+		// ===== 四点同心双圆弧 =====
+		// 点1=起点A, 点2=终点B, 点3=锁r1, 点4=锁r2
 		if (m_currentShape == Shape_Arc)
 		{
 			if (event->type() == QEvent::MouseButtonPress)
@@ -190,70 +190,70 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				if (me->button() == Qt::LeftButton)
 				{
 					if (m_drawStep == 0) {
-						m_circlePt1 = scenePos; m_drawStep = 1;  // 起点 A
+						m_circlePt1 = scenePos; m_drawStep = 1;
 						double mrkR = 3.0;
-						m_circleMarker1 = new QGraphicsEllipseItem(m_circlePt1.x()-mrkR, m_circlePt1.y()-mrkR, mrkR*2, mrkR*2);
-						m_circleMarker1->setPen(Qt::NoPen); m_circleMarker1->setBrush(QColor(255,80,80));
-						m_circleMarker1->setZValue(100); m_scene->addItem(m_circleMarker1);
-					}
-					else if (m_drawStep == 1) {
-						m_circlePt2 = scenePos; m_drawStep = 2;  // 终点 B
+						m_circleMarker1 = new QGraphicsEllipseItem(m_circlePt1.x()-mrkR,m_circlePt1.y()-mrkR,mrkR*2,mrkR*2);
+						m_circleMarker1->setPen(Qt::NoPen);m_circleMarker1->setBrush(QColor(255,80,80));m_circleMarker1->setZValue(100);m_scene->addItem(m_circleMarker1);
+					}else if(m_drawStep == 1){
+						m_circlePt2 = scenePos; m_drawStep = 2;
 						double mrkR = 3.0;
-						m_circleMarker2 = new QGraphicsEllipseItem(m_circlePt2.x()-mrkR, m_circlePt2.y()-mrkR, mrkR*2, mrkR*2);
-						m_circleMarker2->setPen(Qt::NoPen); m_circleMarker2->setBrush(QColor(255,80,80));
-						m_circleMarker2->setZValue(100); m_scene->addItem(m_circleMarker2);
-					}
-					else if (m_drawStep == 2)
-					{
+						m_circleMarker2 = new QGraphicsEllipseItem(m_circlePt2.x()-mrkR,m_circlePt2.y()-mrkR,mrkR*2,mrkR*2);
+						m_circleMarker2->setPen(Qt::NoPen);m_circleMarker2->setBrush(QColor(255,80,80));m_circleMarker2->setZValue(100);m_scene->addItem(m_circleMarker2);
+					}else if(m_drawStep == 2){
+						// 第三点锁r1
+						QPointF A(m_circlePt1),B(m_circlePt2),C(scenePos),O;double r1;
+						if(circumcircle(A,B,C,O,r1)&&r1>1.5){
+							double aA=normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
+							double aB=normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(),B.x()-O.x())));
+							double aC=normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(),C.x()-O.x())));
+							double sf=aB-aA;if(sf<=0)sf+=360.0;double rc=aC-aA;if(rc<0)rc+=360.0;
+							double sp=(rc<=sf)?sf:(sf-360.0);
+							m_anchorPoint=O;m_arcStartAngle=aA;m_arcEndAngle=sp;
+							m_dragStartRect.cx=O.x();m_dragStartRect.cy=O.y();m_dragStartRect.w=r1;
+							m_drawStep=3;
+						}
+					}else if(m_drawStep == 3){
 						commitArc();
-						if (m_ghostArcPath)   { m_scene->removeItem(m_ghostArcPath);   delete m_ghostArcPath;   m_ghostArcPath   = nullptr; }
-						if (m_ghostEllipse)   { m_scene->removeItem(m_ghostEllipse);   delete m_ghostEllipse;   m_ghostEllipse   = nullptr; }
-						if (m_circleMarker1)  { m_scene->removeItem(m_circleMarker1);  delete m_circleMarker1;  m_circleMarker1  = nullptr; }
-						if (m_circleMarker2)  { m_scene->removeItem(m_circleMarker2);  delete m_circleMarker2;  m_circleMarker2  = nullptr; }
-						hideDrawModeOverlay(); m_mode = Mode_None; m_drawStep = 0;
-						ui.canvas_view_main->setCursor(Qt::ArrowCursor);
+						if(m_ghostArcPath){m_scene->removeItem(m_ghostArcPath);delete m_ghostArcPath;m_ghostArcPath=nullptr;}
+						if(m_ghostEllipse2){m_scene->removeItem(m_ghostEllipse2);delete m_ghostEllipse2;m_ghostEllipse2=nullptr;}
+						if(m_circleMarker1){m_scene->removeItem(m_circleMarker1);delete m_circleMarker1;m_circleMarker1=nullptr;}
+						if(m_circleMarker2){m_scene->removeItem(m_circleMarker2);delete m_circleMarker2;m_circleMarker2=nullptr;}
+						hideDrawModeOverlay();m_mode=Mode_None;m_drawStep=0;ui.canvas_view_main->setCursor(Qt::ArrowCursor);
 					}
-					event->accept(); return true;
-				}
-				else if (me->button() == Qt::RightButton) { stopDraw(); event->accept(); return true; }
+					event->accept();return true;
+				}else if(me->button()==Qt::RightButton){stopDraw();event->accept();return true;}
 			}
-			else if (event->type() == QEvent::MouseMove && m_drawStep == 2)
+			else if(event->type()==QEvent::MouseMove&&m_drawStep>=2&&m_drawStep<=3)
 			{
-				// 缓存第三点供 commitArc 使用
-				m_dragStartRect.cx = scenePos.x(); m_dragStartRect.cy = scenePos.y();
-
-				// 预览：三点外接圆弧，A→B（方向由鼠标 C 决定）
-				QPointF A(m_circlePt1), B(m_circlePt2), C(scenePos), O;
-				double r;
-				if (circumcircle(A, B, C, O, r) && r > 1.5)
-				{
-					double aA = normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(), A.x()-O.x())));
-					double aB = normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(), B.x()-O.x())));
-					double aC = normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(), C.x()-O.x())));
-
-					// 弧始终 A→B，正跨度=含C逆时针，负跨度=含C顺时针
-					double spanFwd = aB - aA; if (spanFwd <= 0) spanFwd += 360.0;
-					double relC = aC - aA; if (relC < 0) relC += 360.0;
-					double span = (relC <= spanFwd) ? spanFwd : (spanFwd - 360.0);
-
-					if (!m_ghostArcPath) {
-						m_ghostArcPath = new QGraphicsPathItem();
-						QPen pen(QColor(0, 180, 255), m_penWidth, Qt::DashLine); pen.setCosmetic(true);
-						m_ghostArcPath->setPen(pen);
-						m_ghostArcPath->setZValue(99);
-						m_scene->addItem(m_ghostArcPath);
+				QPointF A(m_circlePt1),B(m_circlePt2);
+				if(m_drawStep==2){
+					QPointF C(scenePos),O;double r;
+					if(circumcircle(A,B,C,O,r)&&r>1.5){
+						double aA=normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
+						double aB=normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(),B.x()-O.x())));
+						double aC=normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(),C.x()-O.x())));
+						double sf=aB-aA;if(sf<=0)sf+=360.0;double rc=aC-aA;if(rc<0)rc+=360.0;
+						double sp=(rc<=sf)?sf:(sf-360.0);
+						if(!m_ghostArcPath){m_ghostArcPath=new QGraphicsPathItem();QPen p(QColor(0,180,255),m_penWidth,Qt::DashLine);p.setCosmetic(true);m_ghostArcPath->setPen(p);m_ghostArcPath->setZValue(99);m_scene->addItem(m_ghostArcPath);}
+						QPainterPath ph;const int N=128;double ar=qDegreesToRadians(aA),sr=qDegreesToRadians(sp);
+						ph.moveTo(O.x()+r*qCos(ar),O.y()+r*qSin(ar));
+						for(int i=1;i<=N;++i){double ang=ar+sr*i/N;ph.lineTo(O.x()+r*qCos(ang),O.y()+r*qSin(ang));}
+						m_ghostArcPath->setPath(ph);
 					}
-					QPainterPath path;
-					const int N = 128;
-					double aARad = qDegreesToRadians(aA), spanRad = qDegreesToRadians(span);
-					path.moveTo(O.x() + r*qCos(aARad), O.y() + r*qSin(aARad));
-					for (int i = 1; i <= N; ++i) {
-						double ang = aARad + spanRad * i / N;
-						path.lineTo(O.x() + r*qCos(ang), O.y() + r*qSin(ang));
-					}
-					m_ghostArcPath->setPath(path);
+				}else{
+					QPointF O=m_anchorPoint;double aA=m_arcStartAngle,sp=m_arcEndAngle,r1=m_dragStartRect.w;
+					double r2=std::sqrt((scenePos.x()-O.x())*(scenePos.x()-O.x())+(scenePos.y()-O.y())*(scenePos.y()-O.y()));r2=std::max(r2,2.0);
+					double rO=std::max(r1,r2),rI=std::min(r1,r2);
+					if(!m_ghostArcPath){m_ghostArcPath=new QGraphicsPathItem();QPen p(QColor(0,180,255),m_penWidth,Qt::DashLine);p.setCosmetic(true);m_ghostArcPath->setPen(p);m_ghostArcPath->setZValue(99);m_scene->addItem(m_ghostArcPath);}
+					double aR=qDegreesToRadians(aA),sR=qDegreesToRadians(sp);QPainterPath ph;const int N=128;
+					ph.moveTo(O.x()+rO*qCos(aR),O.y()+rO*qSin(aR));
+					for(int i=1;i<=N;++i){double ang=aR+sR*i/N;ph.lineTo(O.x()+rO*qCos(ang),O.y()+rO*qSin(ang));}
+					double eR=aR+sR;ph.lineTo(O.x()+rI*qCos(eR),O.y()+rI*qSin(eR));
+					for(int i=N;i>=0;--i){double ang=aR+sR*i/N;ph.lineTo(O.x()+rI*qCos(ang),O.y()+rI*qSin(ang));}
+					ph.closeSubpath();m_ghostArcPath->setPath(ph);
+					m_dragStartRect.h=r2;
 				}
-				event->accept(); return true;
+				event->accept();return true;
 			}
 			return false;
 		}
@@ -586,6 +586,11 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					m_activeShape->ring.cx = scenePos.x() - m_dragOffset.x();
 					m_activeShape->ring.cy = scenePos.y() - m_dragOffset.y();
 				}
+				else if (m_activeShape->type == Shape_Arc)
+				{
+					m_activeShape->arc.cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->arc.cy = scenePos.y() - m_dragOffset.y();
+				}
 				else
 				{
 					m_activeShape->rect.cx = scenePos.x() - m_dragOffset.x();
@@ -614,7 +619,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						m_dragShape = m_activeShape;
 						m_dragHandleIndex = hIdx;
 						if (m_activeShape->type == Shape_Arc)
-							m_dragStartAngle = m_activeShape->arc.startAngle + m_activeShape->arc.rInner / 2.0;  // 中点角度
+							m_dragStartAngle = normAngle360(m_activeShape->arc.startAngle + m_activeShape->arc.r1 / 2.0);
 						else
 							m_dragStartAngle = m_activeShape->rotatedRect.angle;
 						ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
@@ -674,6 +679,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			else if (m_activeShape->type == Shape_Ring)
 				m_dragOffset = QPointF(scenePos.x() - m_activeShape->ring.cx,
 				                       scenePos.y() - m_activeShape->ring.cy);
+			else if (m_activeShape->type == Shape_Arc)
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->arc.cx,
+				                       scenePos.y() - m_activeShape->arc.cy);
 			else
 				m_dragOffset = QPointF(scenePos.x() - m_activeShape->rect.cx,
 				                       scenePos.y() - m_activeShape->rect.cy);
@@ -1039,11 +1047,8 @@ void ImageCanvasView::showParamPanel()
 		count = 4;
 		break;
 	case Shape_Arc:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半径 R") << QStringLiteral("起始角") << QStringLiteral("终止角");
-		count = 5;
-		break;
-		count = 6;
-		break;
+		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半径1") << QStringLiteral("半径2") << QStringLiteral("起始角") << QStringLiteral("跨度");
+		count = 6; break;
 	default:
 		paramNames << QStringLiteral("暂无参数");
 		count = 0;
@@ -1074,8 +1079,9 @@ void ImageCanvasView::showParamPanel()
 			paramVals[0]=existing->ring.cx; paramVals[1]=existing->ring.cy; paramVals[2]=existing->ring.r1; paramVals[3]=existing->ring.r2;
 			break;
 		case Shape_Arc:
-			paramVals[0]=existing->arc.cx; paramVals[1]=existing->arc.cy; paramVals[2]=existing->arc.rOuter;
-			paramVals[3]=existing->arc.startAngle; paramVals[4]=existing->arc.endAngle;
+			paramVals[0]=existing->arc.cx; paramVals[1]=existing->arc.cy;
+			paramVals[2]=existing->arc.rOuter; paramVals[3]=existing->arc.rInner;
+			paramVals[4]=existing->arc.startAngle; paramVals[5]=existing->arc.r1;
 			break;
 		default: break;
 		}
@@ -1195,12 +1201,7 @@ void ImageCanvasView::applyParamAndRedraw()
 		if (n>=4) { shape->ring.cx = m_paramSpins[0]->value(); shape->ring.cy = m_paramSpins[1]->value(); shape->ring.r1 = m_paramSpins[2]->value(); shape->ring.r2 = m_paramSpins[3]->value(); }
 		break;
 	case Shape_Arc:
-		if (n>=5) {
-			shape->arc.cx = m_paramSpins[0]->value(); shape->arc.cy = m_paramSpins[1]->value();
-			shape->arc.rOuter = m_paramSpins[2]->value();
-			shape->arc.startAngle = m_paramSpins[3]->value(); shape->arc.endAngle = m_paramSpins[4]->value();
-		}
-		break;
+		if(n>=6){shape->arc.cx=m_paramSpins[0]->value();shape->arc.cy=m_paramSpins[1]->value();shape->arc.rOuter=m_paramSpins[2]->value();shape->arc.rInner=m_paramSpins[3]->value();shape->arc.startAngle=m_paramSpins[4]->value();shape->arc.r1=m_paramSpins[5]->value();shape->arc.endAngle=shape->arc.startAngle+shape->arc.r1;}break;
 	default: break;
 	}
 
@@ -1325,39 +1326,21 @@ static bool solveConcentricArc(const QPointF& A, const QPointF& B, double r1, do
 	return true;
 }
 
-// ===== 圆弧提交 =====
-// ===== 三点定弧提交 =====
+// ===== 同心双圆弧提交 =====
 void ImageCanvasView::commitArc()
 {
-	QPointF A(m_circlePt1), B(m_circlePt2);
-	if (!m_ghostArcPath) return;
-	// 从 ghostPath 反推第三点：圆弧终点
-	// 简化：直接用 scenePos_last（MouseMove 最后的位置）不可用，改用 ghostPath 的终点
-	// 这里直接重算：三点取最后移动到的位置。但由于 callback 时没有 scenePos，
-	// 我们换一种方式：在 MouseMove 中缓存 thirdPoint
-	QPointF C(m_dragStartRect.cx, m_dragStartRect.cy);  // 由 MouseMove 存
-	QPointF O; double r;
-	if (!circumcircle(A, B, C, O, r) || r < 1.5) return;
-
-	double aA = normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(), A.x()-O.x())));
-	double aB = normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(), B.x()-O.x())));
-	double aC = normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(), C.x()-O.x())));
-
-	// 弧始终 A→B，方向由 C 决定
-	double spanFwd = aB - aA; if (spanFwd <= 0) spanFwd += 360.0;
-	double relC = aC - aA; if (relC < 0) relC += 360.0;
-	double span = (relC <= spanFwd) ? spanFwd : (spanFwd - 360.0);
-
-	DrawShapeItem* shape = findShapeByType(Shape_Arc);
-	if (!shape) { shape = new DrawShapeItem(Shape_Arc); m_shapes.append(shape); }
-	shape->arc.cx = O.x(); shape->arc.cy = O.y();
-	shape->arc.rOuter = r;
-	shape->arc.startAngle = aA;
-	shape->arc.endAngle   = aB;
-	shape->arc.rInner     = span;
-
-	clearSceneShape(); m_activeShape = shape; rebuildShapeOnScene(shape);
+	double cx=m_dragStartRect.cx,cy=m_dragStartRect.cy,r1=m_dragStartRect.w,r2=m_dragStartRect.h;
+	r2=std::max(r2,2.0);if(r1<2.0||r2<2.0)return;
+	double aA=m_arcStartAngle,span=m_arcEndAngle;
+	double rOuter=std::max(r1,r2),rInner=std::min(r1,r2);
+	DrawShapeItem* shape=findShapeByType(Shape_Arc);
+	if(!shape){shape=new DrawShapeItem(Shape_Arc);m_shapes.append(shape);}
+	shape->arc.cx=cx;shape->arc.cy=cy;
+	shape->arc.rOuter=rOuter;shape->arc.rInner=rInner;
+	shape->arc.startAngle=aA;shape->arc.endAngle=aA+span;shape->arc.r1=span;
+	clearSceneShape();m_activeShape=shape;rebuildShapeOnScene(shape);
 }
+
 
 
 void ImageCanvasView::commitRect()
@@ -1503,24 +1486,15 @@ QGraphicsItem* ImageCanvasView::buildShapeItem(const DrawShapeItem& shape)
 	}
 	case Shape_Arc:
 	{
-		double cx = shape.arc.cx, cy = shape.arc.cy, r = shape.arc.rOuter;
-		double sa = shape.arc.startAngle, span = shape.arc.rInner;
-
-		// 线段逼近弧线，完全绕过 Qt arcTo 的偏移问题
-		const int N = 128;
-		QPainterPath path;
-		double saRad = qDegreesToRadians(sa);
-		path.moveTo(cx + r * qCos(saRad), cy + r * qSin(saRad));
-		for (int i = 1; i <= N; ++i) {
-			double ang = saRad + qDegreesToRadians(span) * i / N;
-			path.lineTo(cx + r * qCos(ang), cy + r * qSin(ang));
-		}
-
-		QGraphicsPathItem* p = new QGraphicsPathItem();
-		p->setPath(path);
-		p->setZValue(80);
-		item = p;
-		break;
+		double cx=shape.arc.cx,cy=shape.arc.cy,rO=shape.arc.rOuter,rI=shape.arc.rInner;
+		double sa=shape.arc.startAngle,span=shape.arc.r1,saR=qDegreesToRadians(sa),spR=qDegreesToRadians(span);
+		const int N=128;QPainterPath path;
+		path.moveTo(cx+rO*qCos(saR),cy+rO*qSin(saR));
+		for(int i=1;i<=N;++i){double a=saR+spR*i/N;path.lineTo(cx+rO*qCos(a),cy+rO*qSin(a));}
+		double eR=saR+spR;path.lineTo(cx+rI*qCos(eR),cy+rI*qSin(eR));
+		for(int i=N;i>=0;--i){double a=saR+spR*i/N;path.lineTo(cx+rI*qCos(a),cy+rI*qSin(a));}
+		path.closeSubpath();
+		QGraphicsPathItem* p=new QGraphicsPathItem();p->setPath(path);p->setZValue(80);item=p;break;
 	}
 	default: break;
 	}
@@ -1659,48 +1633,25 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 	}
 	else if (isArc)
 	{
-		// 控制点: 起点(0,红)、终点(1,红)、弧中点半径(2,蓝)、旋转手柄
-		double cx = shape->arc.cx, cy = shape->arc.cy, r = shape->arc.rOuter;
-		double sa = shape->arc.startAngle, span = shape->arc.rInner;
-		double saRad = qDegreesToRadians(sa);
-		double eaRad = qDegreesToRadians(sa + span);  // 终点实际角度
-		double midAng = sa + span / 2.0;
-		double midRad = qDegreesToRadians(midAng);
+		double cx=shape->arc.cx,cy=shape->arc.cy,rO=shape->arc.rOuter,rI=shape->arc.rInner;
+		double sa=shape->arc.startAngle,span=shape->arc.r1;
+		double saR=qDegreesToRadians(sa),eaR=qDegreesToRadians(sa+span);
+		double midA=sa+span/2.0,midR=qDegreesToRadians(midA);
 
-		// 起点 + 终点 (红)
-		QPointF pts[2] = {
-			QPointF(cx + r * qCos(saRad),  cy + r * qSin(saRad)),
-			QPointF(cx + r * qCos(eaRad), cy + r * qSin(eaRad))
-		};
-		for (int i = 0; i < 2; ++i) {
-			auto* h = new QGraphicsEllipseItem(pts[i].x()-kHandleRadius, pts[i].y()-kHandleRadius, kHandleRadius*2, kHandleRadius*2);
-			h->setPen(QPen(Qt::white, 1)); h->setBrush(QColor(255,80,80)); h->setZValue(100);
-			h->setData(0, i); h->setData(1, 0); h->setAcceptHoverEvents(true);
-			m_scene->addItem(h); shape->handles.append(h);
-		}
+		// 外弧: 起点(0,红)、终点(1,红)、中点半径(2,蓝)
+		QPointF oPts[3]={{cx+rO*qCos(saR),cy+rO*qSin(saR)},{cx+rO*qCos(eaR),cy+rO*qSin(eaR)},{cx+rO*qCos(midR),cy+rO*qSin(midR)}};
+		QColor oCs[3]={QColor(255,80,80),QColor(255,80,80),QColor(0,180,255)};
+		for(int i=0;i<3;++i){auto* h=new QGraphicsEllipseItem(oPts[i].x()-kHandleRadius,oPts[i].y()-kHandleRadius,kHandleRadius*2,kHandleRadius*2);h->setPen(QPen(Qt::white,1));h->setBrush(oCs[i]);h->setZValue(100);h->setData(0,i);h->setData(1,0);h->setAcceptHoverEvents(true);m_scene->addItem(h);shape->handles.append(h);}
 
-		// 弧中点半径控制点 (2, 蓝)
-		QPointF midPt(cx + r * qCos(midRad), cy + r * qSin(midRad));
-		auto* hRad = new QGraphicsEllipseItem(midPt.x()-kHandleRadius, midPt.y()-kHandleRadius, kHandleRadius*2, kHandleRadius*2);
-		hRad->setPen(QPen(Qt::white, 1)); hRad->setBrush(QColor(0,180,255)); hRad->setZValue(100);
-		hRad->setData(0, 2); hRad->setData(1, 0); hRad->setAcceptHoverEvents(true);
-		m_scene->addItem(hRad); shape->handles.append(hRad);
+		// 内弧: 中点半径(3,橙)、起点(4,红)、终点(5,红)
+		QPointF iPts[3]={{cx+rI*qCos(midR),cy+rI*qSin(midR)},{cx+rI*qCos(saR),cy+rI*qSin(saR)},{cx+rI*qCos(eaR),cy+rI*qSin(eaR)}};
+		QColor iCs[3]={QColor(255,140,0),QColor(255,80,80),QColor(255,80,80)};
+		for(int i=0;i<3;++i){auto* h=new QGraphicsEllipseItem(iPts[i].x()-kHandleRadius,iPts[i].y()-kHandleRadius,kHandleRadius*2,kHandleRadius*2);h->setPen(QPen(Qt::white,1));h->setBrush(iCs[i]);h->setZValue(100);h->setData(0,i+3);h->setData(1,0);h->setAcceptHoverEvents(true);m_scene->addItem(h);shape->handles.append(h);}
 
-		// 旋转手柄（弧中点外法线方向）
-		double stickLen = 30.0;
-		QPointF rotPt(cx + (r+stickLen) * qCos(midRad), cy + (r+stickLen) * qSin(midRad));
-		shape->rotateStickLine = new QGraphicsLineItem(midPt.x(), midPt.y(), rotPt.x(), rotPt.y());
-		QPen stickPen(QColor(220,220,220), 1); stickPen.setCosmetic(true);
-		shape->rotateStickLine->setPen(stickPen); shape->rotateStickLine->setZValue(95);
-		m_scene->addItem(shape->rotateStickLine);
-
-		shape->rotateHandle = new QGraphicsEllipseItem(rotPt.x()-kHandleRadius, rotPt.y()-kHandleRadius, kHandleRadius*2, kHandleRadius*2);
-		shape->rotateHandle->setPen(QPen(QColor(255,200,0), 2));
-		shape->rotateHandle->setBrush(QColor(255,180,0));
-		shape->rotateHandle->setZValue(100);
-		shape->rotateHandle->setData(0, 0); shape->rotateHandle->setData(1, 1);  // role=1 → 旋转
-		shape->rotateHandle->setAcceptHoverEvents(true);
-		m_scene->addItem(shape->rotateHandle);
+		// 旋转手柄
+		double rRot=std::max(rO,rI),sL=30.0;QPointF omP(cx+rRot*qCos(midR),cy+rRot*qSin(midR)),rotP(cx+(rRot+sL)*qCos(midR),cy+(rRot+sL)*qSin(midR));
+		shape->rotateStickLine=new QGraphicsLineItem(omP.x(),omP.y(),rotP.x(),rotP.y());QPen sP(QColor(220,220,220),1);sP.setCosmetic(true);shape->rotateStickLine->setPen(sP);shape->rotateStickLine->setZValue(95);m_scene->addItem(shape->rotateStickLine);
+		shape->rotateHandle=new QGraphicsEllipseItem(rotP.x()-kHandleRadius,rotP.y()-kHandleRadius,kHandleRadius*2,kHandleRadius*2);shape->rotateHandle->setPen(QPen(QColor(255,200,0),2));shape->rotateHandle->setBrush(QColor(255,180,0));shape->rotateHandle->setZValue(100);shape->rotateHandle->setData(0,0);shape->rotateHandle->setData(1,1);shape->rotateHandle->setAcceptHoverEvents(true);m_scene->addItem(shape->rotateHandle);
 	}
 	else if (isEllipse)
 	{
@@ -1919,38 +1870,27 @@ void ImageCanvasView::updateHandlePositions(DrawShapeItem* shape)
 	}
 	else if (shape->type == Shape_Arc)
 	{
-		double cx = shape->arc.cx, cy = shape->arc.cy, r = shape->arc.rOuter;
-		double sa = shape->arc.startAngle, span = shape->arc.rInner;
-		double saRad = qDegreesToRadians(sa);
-		double eaRad = qDegreesToRadians(sa + span);
-		double midAng = sa + span / 2.0, midRad = qDegreesToRadians(midAng);
-
-		if (0 < (int)shape->handles.size()) moveHandle(shape->handles[0], QPointF(cx + r*qCos(saRad),  cy + r*qSin(saRad)));
-		if (1 < (int)shape->handles.size()) moveHandle(shape->handles[1], QPointF(cx + r*qCos(eaRad), cy + r*qSin(eaRad)));
-		if (2 < (int)shape->handles.size()) moveHandle(shape->handles[2], QPointF(cx + r*qCos(midRad), cy + r*qSin(midRad)));
-
-		// 旋转手柄
-		if (shape->rotateHandle) {
-			double stickLen = 30.0;
-			QPointF midPt(cx + r*qCos(midRad), cy + r*qSin(midRad));
-			QPointF rotPt(cx + (r+stickLen)*qCos(midRad), cy + (r+stickLen)*qSin(midRad));
-			moveHandle(shape->rotateHandle, rotPt);
-			if (shape->rotateStickLine)
-				shape->rotateStickLine->setLine(midPt.x(), midPt.y(), rotPt.x(), rotPt.y());
-		}
+		double cx=shape->arc.cx,cy=shape->arc.cy,rO=shape->arc.rOuter,rI=shape->arc.rInner;
+		double sa=shape->arc.startAngle,span=shape->arc.r1,saR=qDegreesToRadians(sa),spR=qDegreesToRadians(span);
+		double eR=saR+spR,midA=sa+span/2.0,midR=qDegreesToRadians(midA);
+		if(0<(int)shape->handles.size())moveHandle(shape->handles[0],QPointF(cx+rO*qCos(saR),cy+rO*qSin(saR)));
+		if(1<(int)shape->handles.size())moveHandle(shape->handles[1],QPointF(cx+rO*qCos(eR),cy+rO*qSin(eR)));
+		if(2<(int)shape->handles.size())moveHandle(shape->handles[2],QPointF(cx+rO*qCos(midR),cy+rO*qSin(midR)));
+		if(3<(int)shape->handles.size())moveHandle(shape->handles[3],QPointF(cx+rI*qCos(midR),cy+rI*qSin(midR)));
+		if(4<(int)shape->handles.size())moveHandle(shape->handles[4],QPointF(cx+rI*qCos(saR),cy+rI*qSin(saR)));
+		if(5<(int)shape->handles.size())moveHandle(shape->handles[5],QPointF(cx+rI*qCos(eR),cy+rI*qSin(eR)));
+		if(shape->rotateHandle){double rRot=std::max(rO,rI),sL=30.0;QPointF omP(cx+rRot*qCos(midR),cy+rRot*qSin(midR)),rotP(cx+(rRot+sL)*qCos(midR),cy+(rRot+sL)*qSin(midR));moveHandle(shape->rotateHandle,rotP);if(shape->rotateStickLine)shape->rotateStickLine->setLine(omP.x(),omP.y(),rotP.x(),rotP.y());}
 
 		if (shape->centerCrossH) shape->centerCrossH->setLine(cx-kCrossLen, cy, cx+kCrossLen, cy);
 		if (shape->centerCrossV) shape->centerCrossV->setLine(cx, cy-kCrossLen, cx, cy+kCrossLen);
 
 		if (auto* p = dynamic_cast<QGraphicsPathItem*>(shape->item)) {
-			const int N = 128;
-			QPainterPath path;
-			path.moveTo(cx + r*qCos(saRad), cy + r*qSin(saRad));
-			for (int i = 1; i <= N; ++i) {
-				double ang = saRad + qDegreesToRadians(span) * i / N;
-				path.lineTo(cx + r*qCos(ang), cy + r*qSin(ang));
-			}
-			p->setPath(path);
+			const int N=128;QPainterPath ph;
+			ph.moveTo(cx+rO*qCos(saR),cy+rO*qSin(saR));
+			for(int i=1;i<=N;++i){double a=saR+spR*i/N;ph.lineTo(cx+rO*qCos(a),cy+rO*qSin(a));}
+			double endR=saR+spR;ph.lineTo(cx+rI*qCos(endR),cy+rI*qSin(endR));
+			for(int i=N;i>=0;--i){double a=saR+spR*i/N;ph.lineTo(cx+rI*qCos(a),cy+rI*qSin(a));}
+			ph.closeSubpath();p->setPath(ph);
 		}
 	}
 	else if (shape->type == Shape_Ellipse)
@@ -2088,16 +2028,16 @@ bool ImageCanvasView::isPointInShape(const DrawShapeItem* shape, const QPointF& 
 	}
 	case Shape_Arc:
 	{
-		// 圆弧：检查点到弧线的距离（在圆上且在角度范围内）
-		double cx = shape->arc.cx, cy = shape->arc.cy, r = shape->arc.rOuter;
-		double dx = scenePos.x() - cx, dy = scenePos.y() - cy;
-		double dist = std::abs(std::sqrt(dx*dx + dy*dy) - r);
-		if (dist > 8.0) return false;
-		double ang = normAngle360(qRadiansToDegrees(std::atan2(dy, dx)));
-		double sa = normAngle360(shape->arc.startAngle), ea = normAngle360(shape->arc.endAngle);
-		double span = ea - sa; if (span <= 0) span += 360.0;
-		double rel = ang - sa; if (rel < 0) rel += 360.0;
-		return rel <= span;
+		double cx=shape->arc.cx,cy=shape->arc.cy;
+		double rBig=std::max(shape->arc.rOuter,shape->arc.rInner);
+		double rSml=std::min(shape->arc.rOuter,shape->arc.rInner);
+		double dx=scenePos.x()-cx,dy=scenePos.y()-cy,d=std::sqrt(dx*dx+dy*dy);
+		if(d>rBig+8.0||d<rSml-8.0)return false;
+		double ang=normAngle360(qRadiansToDegrees(std::atan2(dy,dx)));
+		double sa=normAngle360(shape->arc.startAngle),span=shape->arc.r1;
+		double rel=ang-sa;if(rel<0)rel+=360.0;
+		if(span>=0)return rel<=span;
+		return rel>=360.0+span;  // 顺时针弧：检测"非缺口"范围
 	}
 	case Shape_Ellipse:
 	{
@@ -2342,36 +2282,24 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 	// 旋转
 	if (m_isRotating) {
 		double newMidAng = normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy, scenePos.x()-cx)));
-		double oldMidAng = m_dragStartAngle;  // 存的是旧的中点角度
-		double delta = newMidAng - oldMidAng;
+		double delta = newMidAng - m_dragStartAngle;
+		if (delta > 180.0) delta -= 360.0;
+		if (delta < -180.0) delta += 360.0;
 		m_dragShape->arc.startAngle += delta;
-		m_dragStartAngle = newMidAng;  // 更新基准
+		m_dragStartAngle = newMidAng;
 		updateHandlePositions(m_dragShape);
 		return;
 	}
 
-	if (m_dragHandleIndex < 0 || m_dragHandleIndex >= 3) return;
+	if (m_dragHandleIndex < 0 || m_dragHandleIndex >= 6) return;
 
-	if (m_dragHandleIndex == 0 || m_dragHandleIndex == 1) {
-		// 端点拖拽：改角度
-		double newAngle = normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy, scenePos.x()-cx)));
-		if (m_dragHandleIndex == 0)
-			m_dragShape->arc.startAngle = newAngle;
-		else
-			m_dragShape->arc.endAngle = newAngle;
-
-		double sa = m_dragShape->arc.startAngle, ea = m_dragShape->arc.endAngle;
-		bool wasClockwise = (m_dragShape->arc.rInner < 0);
-		double spanFwd = ea - sa; if (spanFwd <= 0) spanFwd += 360.0;
-		m_dragShape->arc.rInner = wasClockwise ? (spanFwd - 360.0) : spanFwd;
-	}
-	else if (m_dragHandleIndex == 2) {
-		// 半径拖拽：鼠标到圆心距离 = 新半径
-		double newR = std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx) + (scenePos.y()-cy)*(scenePos.y()-cy));
-		newR = std::max(newR, 2.0);
-		m_dragShape->arc.rOuter = newR;
-	}
-
+	if(m_dragHandleIndex==0||m_dragHandleIndex==1||m_dragHandleIndex==4||m_dragHandleIndex==5){
+		double na=normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy,scenePos.x()-cx)));
+		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->arc.startAngle=na;else m_dragShape->arc.endAngle=na;
+		double sa=m_dragShape->arc.startAngle,ea=m_dragShape->arc.endAngle;bool cw=(m_dragShape->arc.r1<0);
+		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->arc.r1=cw?(sf-360.0):sf;
+	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rOuter=std::max(nr,1.5);
+	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rInner=std::max(nr,1.5);}
 	updateHandlePositions(m_dragShape);
 }
 

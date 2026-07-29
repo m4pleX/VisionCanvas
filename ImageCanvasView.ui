@@ -534,7 +534,7 @@ QComboBox:hover {
                 </item>
                 <item>
                  <property name="text">
-                  <string>圆弧</string>
+                  <string>同心双圆弧</string>
                  </property>
                 </item>
                 <item>
