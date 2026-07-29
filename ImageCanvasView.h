@@ -57,7 +57,7 @@ struct DrawShapeItem
 	struct RotatedRect { double cx = 0, cy = 0, w = 0, h = 0, angle = 0; } rotatedRect;
 	struct Circle { double cx = 0, cy = 0, r = 0; } circle;
 	struct Ellipse { double cx = 0, cy = 0, r1 = 0, r2 = 0, angle = 0; } ellipse;
-	struct Ring { double cx = 0, cy = 0, rOuter = 0, rInner = 0; } ring;
+	struct Ring { double cx = 0, cy = 0, r1 = 0, r2 = 0; } ring;  // r1, r2 不区分内外，按大小决定
 	struct Arc { double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0; } arc;
 	struct Polygon { QList<QPointF> pts; } polygon;
 
@@ -146,6 +146,7 @@ private:
 	QGraphicsEllipseItem* m_circleMarker1 = nullptr;  // 点1标记
 	QGraphicsEllipseItem* m_circleMarker2 = nullptr;  // 点2标记
 	QGraphicsEllipseItem* m_ghostEllipse = nullptr;  // 圆形/椭圆的 ghost
+	QGraphicsEllipseItem* m_ghostEllipse2 = nullptr;  // ring 的内圆 ghost
 	QGraphicsRectItem* m_ghostCircumRect = nullptr;   // 外接矩形 ghost
 
 	// ---- 方法 ----
@@ -171,6 +172,7 @@ private:
 	void commitRotatedRect();
 	void commitCircle();
 	void commitEllipse();
+	void commitRing();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
 	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
@@ -185,6 +187,7 @@ private:
 	void updateRotatedRectFromHandle(const QPointF& scenePos);
 	void updateCircleFromHandle(const QPointF& scenePos);
 	void updateEllipseFromHandle(const QPointF& scenePos);
+	void updateRingFromHandle(const QPointF& scenePos);
 	void applyHandleHover(int handleIndex, bool hover);
 	void clearAllHandleHover();
 };
