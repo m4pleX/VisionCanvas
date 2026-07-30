@@ -3,6 +3,7 @@
 #include <QPainterPath>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
+#include <QOpenGLWidget>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
@@ -42,6 +43,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 
 	m_scene = new QGraphicsScene(this);
 	ui.canvas_view_main->setScene(m_scene);
+	ui.canvas_view_main->setViewport(new QOpenGLWidget());
 	ui.canvas_view_main->setMouseTracking(true);
 	ui.canvas_view_main->setDragMode(QGraphicsView::NoDrag);
 
