@@ -799,6 +799,12 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					clearAllHandleHover();
 					static int lastHoverHandle = -1;
 					lastHoverHandle = -1;
+					// 形状本体悬停加粗
+					bool nowHovered = m_activeShape && isPointInShape(m_activeShape, scenePos);
+					if (nowHovered != m_isShapeHovered) {
+						applyShapeHover(nowHovered);
+						m_isShapeHovered = nowHovered;
+					}
 					ui.canvas_view_main->setCursor(Qt::ArrowCursor);
 				}
 			}
@@ -826,6 +832,7 @@ void ImageCanvasView::keyPressEvent(QKeyEvent* event)
 		clearSceneShape();
 		m_shapes.removeOne(m_activeShape);
 		delete m_activeShape;
+		m_isShapeHovered = false;
 		m_activeShape = nullptr;
 		return;
 	}
@@ -937,7 +944,8 @@ void ImageCanvasView::slot_draw_shape_changed(int index)
 	{
 		if (m_mode == Mode_Draw) stopDraw();
 		clearSceneShape();
-		m_activeShape = nullptr;
+		m_isShapeHovered = false;
+	m_activeShape = nullptr;
 		m_activeShapeIndex = 0;
 		ui.canvas_view_main->setCursor(Qt::ArrowCursor);
 		return;
@@ -950,6 +958,7 @@ void ImageCanvasView::slot_draw_shape_changed(int index)
 
 	// 先清掉 scene 上旧的
 	clearSceneShape();
+	m_isShapeHovered = false;
 	m_activeShape = nullptr;
 
 	DrawShapeItem* existing = findShapeByType(type);
@@ -979,6 +988,7 @@ void ImageCanvasView::slotResetShape()
 	// 清除 scene + 从列表删除
 	clearSceneShape();
 	m_shapes.removeOne(shape);
+	m_isShapeHovered = false;
 	m_activeShape = nullptr;
 	delete shape;
 
@@ -1015,7 +1025,8 @@ void ImageCanvasView::rebuildShapeOnScene(DrawShapeItem* shape)
 void ImageCanvasView::applyStyle(DrawShapeItem* shape)
 {
 	if (!shape || !shape->item) return;
-	QPen pen(m_colorSelected, m_penWidth);
+	int w = m_isShapeHovered ? m_penWidth + 2 : m_penWidth;
+	QPen pen(m_colorSelected, w);
 	if (auto* r = dynamic_cast<QGraphicsRectItem*>(shape->item))
 		{ r->setPen(pen); r->setBrush(Qt::NoBrush); }
 	else if (auto* p = dynamic_cast<QGraphicsPolygonItem*>(shape->item))
@@ -2253,6 +2264,18 @@ void ImageCanvasView::clearAllHandleHover()
 {
 	if (!m_activeShape) return;
 	for (int i = 0; i < m_activeShape->handles.size(); ++i) applyHandleHover(i, false);
+}
+
+void ImageCanvasView::applyShapeHover(bool hover)
+{
+	if (!m_activeShape || !m_activeShape->item) return;
+	int w = hover ? m_penWidth + 2 : m_penWidth;
+	QPen pen(m_colorSelected, w);
+	pen.setCosmetic(true);
+	if (auto* r = dynamic_cast<QGraphicsRectItem*>(m_activeShape->item))       r->setPen(pen);
+	else if (auto* po = dynamic_cast<QGraphicsPolygonItem*>(m_activeShape->item)) po->setPen(pen);
+	else if (auto* e = dynamic_cast<QGraphicsEllipseItem*>(m_activeShape->item)) e->setPen(pen);
+	else if (auto* pa = dynamic_cast<QGraphicsPathItem*>(m_activeShape->item))  pa->setPen(pen);
 }
 
 void ImageCanvasView::updateRectFromHandle(const QPointF& scenePos)
