@@ -619,7 +619,6 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				{
 					m_activeShape->rect.cx = scenePos.x() - m_dragOffset.x();
 					m_activeShape->rect.cy = scenePos.y() - m_dragOffset.y();
-					syncParamPanel(m_activeShape);
 				}
 				else if (m_activeShape->type == Shape_RotateRect)
 				{
@@ -657,6 +656,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					m_activeShape->rect.cx = scenePos.x() - m_dragOffset.x();
 					m_activeShape->rect.cy = scenePos.y() - m_dragOffset.y();
 				}
+				syncParamPanel(m_activeShape);
 				updateHandlePositions(m_activeShape);
 			}
 			event->accept();
@@ -1259,8 +1259,27 @@ void ImageCanvasView::syncParamPanel(DrawShapeItem* shape)
 {
 	if(!m_paramPanel||m_paramPanel->isHidden()||!shape)return;
 	switch(shape->type){
-	case Shape_Rect: case Shape_RotateRect:
+	case Shape_Rect:
 		if(m_paramSpins.size()>=4){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[0]->setValue(shape->rect.cx);m_paramSpins[1]->setValue(shape->rect.cy);m_paramSpins[2]->setValue(shape->rect.w);m_paramSpins[3]->setValue(shape->rect.h);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);}break;
+	case Shape_RotateRect:
+		if(m_paramSpins.size()>=5){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[4]->blockSignals(true);m_paramSpins[0]->setValue(shape->rotatedRect.cx);m_paramSpins[1]->setValue(shape->rotatedRect.cy);m_paramSpins[2]->setValue(shape->rotatedRect.w);m_paramSpins[3]->setValue(shape->rotatedRect.h);m_paramSpins[4]->setValue(shape->rotatedRect.angle);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);m_paramSpins[4]->blockSignals(false);}break;
+	case Shape_Circle:
+		if(m_paramSpins.size()>=3){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[0]->setValue(shape->circle.cx);m_paramSpins[1]->setValue(shape->circle.cy);m_paramSpins[2]->setValue(shape->circle.r);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);}break;
+	case Shape_Ellipse:
+		if(m_paramSpins.size()>=5){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[4]->blockSignals(true);m_paramSpins[0]->setValue(shape->ellipse.cx);m_paramSpins[1]->setValue(shape->ellipse.cy);m_paramSpins[2]->setValue(shape->ellipse.r1);m_paramSpins[3]->setValue(shape->ellipse.r2);m_paramSpins[4]->setValue(shape->ellipse.angle);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);m_paramSpins[4]->blockSignals(false);}break;
+	case Shape_Ring:
+		if(m_paramSpins.size()>=4){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[0]->setValue(shape->ring.cx);m_paramSpins[1]->setValue(shape->ring.cy);m_paramSpins[2]->setValue(shape->ring.r1);m_paramSpins[3]->setValue(shape->ring.r2);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);}break;
+	case Shape_Arc:
+		if(m_paramSpins.size()>=6){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[4]->blockSignals(true);m_paramSpins[5]->blockSignals(true);m_paramSpins[0]->setValue(shape->arc.cx);m_paramSpins[1]->setValue(shape->arc.cy);m_paramSpins[2]->setValue(shape->arc.rOuter);m_paramSpins[3]->setValue(shape->arc.rInner);m_paramSpins[4]->setValue(shape->arc.startAngle);m_paramSpins[5]->setValue(shape->arc.r1);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);m_paramSpins[4]->blockSignals(false);m_paramSpins[5]->blockSignals(false);}break;
+	case Shape_Polygon:
+		{
+			int np=(int)shape->polygon.pts.size();
+			if(m_paramSpins.size()>=(int)np*2){
+				for(int i=0;i<np;++i){m_paramSpins[i*2]->blockSignals(true);m_paramSpins[i*2+1]->blockSignals(true);}
+				for(int i=0;i<np;++i){m_paramSpins[i*2]->setValue(shape->polygon.pts[i].x());m_paramSpins[i*2+1]->setValue(shape->polygon.pts[i].y());}
+				for(int i=0;i<np;++i){m_paramSpins[i*2]->blockSignals(false);m_paramSpins[i*2+1]->blockSignals(false);}
+			}
+		}break;
 	default:break;
 	}
 }
@@ -2285,6 +2304,7 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
 		m_dragShape->rotatedRect.angle = angle;
 		updateHandlePositions(m_dragShape);
+		syncParamPanel(m_dragShape);
 	}
 	else if (m_isDraggingHandle)
 	{
@@ -2338,6 +2358,7 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 		m_dragShape->rotatedRect.h  = newH;
 
 		updateHandlePositions(m_dragShape);
+		syncParamPanel(m_dragShape);
 	}
 }
 
@@ -2369,6 +2390,7 @@ void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
 	m_dragShape->circle.r  = newR;
 
 	updateHandlePositions(m_dragShape);
+	syncParamPanel(m_dragShape);
 }
 
 // ===== Ô²»· Handle ÍÏ×§ =====
@@ -2425,6 +2447,7 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 	m_dragShape->ring.cy = cy0;
 
 	updateHandlePositions(m_dragShape);
+	syncParamPanel(m_dragShape);
 }
 
 // ===== ¶à±ßÐÎ Handle ÍÏ×§ =====
@@ -2433,6 +2456,7 @@ void ImageCanvasView::updatePolygonFromHandle(const QPointF& scenePos)
 	if(!m_dragShape||m_dragHandleIndex<0||m_dragHandleIndex>=m_dragShape->polygon.pts.size())return;
 	m_dragShape->polygon.pts[m_dragHandleIndex]=scenePos;
 	updateHandlePositions(m_dragShape);
+	syncParamPanel(m_dragShape);
 }
 
 // ===== Ô²»¡ Handle ÍÏ×§ =====
@@ -2451,6 +2475,7 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 		m_dragShape->arc.startAngle += delta;
 		m_dragStartAngle = newMidAng;
 		updateHandlePositions(m_dragShape);
+		syncParamPanel(m_dragShape);
 		return;
 	}
 
@@ -2464,6 +2489,7 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rOuter=std::max(nr,1.5);
 	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rInner=std::max(nr,1.5);}
 	updateHandlePositions(m_dragShape);
+	syncParamPanel(m_dragShape);
 }
 
 // ===== ÍÖÔ² Handle ÍÏ×§ =====
@@ -2479,6 +2505,7 @@ void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
 		m_dragShape->ellipse.angle = angle;
 		updateHandlePositions(m_dragShape);
+		syncParamPanel(m_dragShape);
 		return;
 	}
 
@@ -2509,4 +2536,5 @@ void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 	m_dragShape->ellipse.r2 = newR2;
 
 	updateHandlePositions(m_dragShape);
+	syncParamPanel(m_dragShape);
 }
