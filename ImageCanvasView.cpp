@@ -86,6 +86,10 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	defaultPixmap.fill(Qt::white);
 	m_pixmapItem->setPixmap(defaultPixmap);
 
+	// OpenGL QPen 残影吸收线（z=999，0.01px透明，终身驻留）
+	m_spotAbsorber = m_scene->addLine(0, 0, 0, 0.01, QPen(QColor(0,0,0,1), 1));
+	m_spotAbsorber->setZValue(999);
+
 	ui.canvas_view_main->viewport()->installEventFilter(this);
 	ui.canvas_view_main->viewport()->setMouseTracking(true);
 
@@ -182,6 +186,16 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		// ===== 绘制模式 =====
 		if (m_mode == Mode_Draw)
 		{
+		// 第一步按下时，吸收线移到点击位置吸收残影
+		if (event->type() == QEvent::MouseButtonPress && m_drawStep == 0)
+		{
+			QMouseEvent* me = static_cast<QMouseEvent*>(event);
+			if (me->button() == Qt::LeftButton && m_spotAbsorber)
+			{
+				m_spotAbsorber->setLine(scenePos.x(), scenePos.y(), scenePos.x(), scenePos.y()+0.01);
+				ui.canvas_view_main->viewport()->repaint();
+			}
+		}
 		// ===== 四点同心双圆弧 =====
 		// 点1=起点A, 点2=终点B, 点3=锁r1, 点4=锁r2
 		if (m_currentShape == Shape_Arc)

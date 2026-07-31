@@ -102,6 +102,7 @@ private:
 	QGraphicsScene* m_scene = nullptr;
 	QGraphicsPixmapItem* m_pixmapItem = nullptr;
 	QGraphicsRectItem* m_bgItem = nullptr;
+	QGraphicsLineItem* m_spotAbsorber = nullptr;  // OpenGL QPen ≤–”∞Œ¸ ’œﬂ
 	double m_scaleValue = 1.0;
 
 	bool m_showCenterCross = false;
