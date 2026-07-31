@@ -1359,7 +1359,10 @@ void ImageCanvasView::showParamPanel()
 
 		QDoubleSpinBox* spin = new QDoubleSpinBox(m_paramPanel);
 		spin->setDecimals(3);
-		spin->setRange(-999999, 999999);
+		// Arc 的起始角限制 [0,360)，跨度限制 [-180,180]
+		if(type==Shape_Arc && i==4)      spin->setRange(0.0, 360.0);
+		else if(type==Shape_Arc && i==5) spin->setRange(-360.0, 360.0);
+		else                             spin->setRange(-999999, 999999);
 		spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
 		spin->setFixedWidth(120);
 		spin->setValue(paramVals[i]);
@@ -2645,6 +2648,11 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->arc.startAngle=na;else m_dragShape->arc.endAngle=na;
 		double sa=m_dragShape->arc.startAngle,ea=m_dragShape->arc.endAngle;bool cw=(m_dragShape->arc.r1<0);
 		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->arc.r1=cw?(sf-360.0):sf;
+		// 归一化未拖拽的那一端，避免残留 >360 的值导致后续计算异常
+		if(m_dragHandleIndex==0||m_dragHandleIndex==4)
+			m_dragShape->arc.endAngle=normAngle360(m_dragShape->arc.endAngle);
+		else
+			m_dragShape->arc.startAngle=normAngle360(m_dragShape->arc.startAngle);
 	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rOuter=std::max(nr,1.5);
 	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rInner=std::max(nr,1.5);}
 	updateHandlePositions(m_dragShape);
