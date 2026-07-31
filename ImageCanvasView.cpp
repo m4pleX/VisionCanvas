@@ -19,6 +19,7 @@
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QtMath>
 
@@ -115,6 +116,9 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	m_infoLabel = new QLabel(this);
 	m_infoLabel->setStyleSheet("background: white; color: black; padding: 2px 4px; border:1px solid #999;");
 	m_infoLabel->setVisible(false);
+
+	// 延迟执行 fit，确保窗口布局完成、viewport 尺寸已确定
+	QTimer::singleShot(0, this, [this]() { slotZoomFit(); });
 }
 
 // ===== 事件处理 =====
@@ -817,11 +821,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				{
 					m_dragStartRect = { 0,0,0,0 };
 				}
-					else
-						m_dragStartRect = m_activeShape->rect;
-						clearAllHandleHover();
-						applyHandleHover(hIdx, true);
-						ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
+				else
+					m_dragStartRect = m_activeShape->rect;
+				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
 						event->accept();
 						return true;
 					}
@@ -1042,11 +1044,12 @@ void ImageCanvasView::slotLoadImage()
 	}
 	QPixmap pixmap = QPixmap::fromImage(loadImg);
 	m_pixmapItem->setPixmap(pixmap);
-	m_scene->setSceneRect(pixmap.rect());
+	// 扩展 sceneRect，在图片外留出充足空间，避免中键拖拽时被限制在图片边界内
+	const qreal pad = 10000.0;
+	m_scene->setSceneRect(pixmap.rect().adjusted(-pad, -pad, pad, pad));
 	ui.info_lab_resolution->setText(QString("(%1, %2)").arg(loadImg.width()).arg(loadImg.height()));
-	m_scaleValue = 1.0;
-	updateScaleUI();
 	updateCenterCross();
+	slotZoomFit();
 }
 
 // ===== Combo box 切换 =====
