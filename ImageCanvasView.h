@@ -91,6 +91,7 @@ private slots:
 	void slotZoomFit();
 	void slotToggleCenterCross();
 	void slotToggleLineWidth();
+	void slotToggleControlPoints();
 	void slotLoadImage();
 	void slot_draw_shape_changed(int index);
 	void slotResetShape();
@@ -106,6 +107,7 @@ private:
 	double m_scaleValue = 1.0;
 
 	bool m_showCenterCross = false;
+	bool m_showControlPoints = true;
 	QGraphicsLineItem* m_crossH = nullptr;
 	QGraphicsLineItem* m_crossV = nullptr;
 

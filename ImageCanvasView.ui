@@ -102,9 +102,6 @@
             <property name="spacing">
              <number>0</number>
             </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
             <property name="topMargin">
              <number>0</number>
             </property>
@@ -206,7 +203,7 @@ QPushButton:pressed{
 </string>
               </property>
               <property name="text">
-               <string>100%缩放</string>
+               <string>实际像素</string>
               </property>
              </widget>
             </item>
@@ -238,7 +235,7 @@ QPushButton:pressed{
 </string>
               </property>
               <property name="text">
-               <string>自适应缩放</string>
+               <string>适合屏幕</string>
               </property>
              </widget>
             </item>
@@ -301,6 +298,38 @@ QPushButton:pressed{
               </property>
               <property name="text">
                <string>显示十字线</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="tool_btn_toggle_control_points">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #bbbbbb;
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-size: 14px;
+    min-height: 26px;
+}
+QPushButton:hover{
+    background-color: #e6f2ff;
+    border-color: #66a8ff;
+}
+QPushButton:pressed{
+    background-color: #cce0ff;
+    border-color: #3388ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>显示控制点</string>
               </property>
              </widget>
             </item>

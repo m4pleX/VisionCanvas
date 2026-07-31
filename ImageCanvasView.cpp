@@ -101,6 +101,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.tool_btn_zoom_fit, &QPushButton::clicked, this, &ImageCanvasView::slotZoomFit);
 	connect(ui.tool_btn_toggle_cross, &QPushButton::clicked, this, &ImageCanvasView::slotToggleCenterCross);
 	connect(ui.tool_btn_toggle_line_width, &QPushButton::clicked, this, &ImageCanvasView::slotToggleLineWidth);
+	connect(ui.tool_btn_toggle_control_points, &QPushButton::clicked, this, &ImageCanvasView::slotToggleControlPoints);
 
 	connect(ui.draw_btn_load_image, &QPushButton::clicked, this, &ImageCanvasView::slotLoadImage);
 	connect(ui.draw_cbox_shape_type, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -875,21 +876,12 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				QGraphicsEllipseItem* hoverHandle = handleAt(scenePos);
 				if (hoverHandle && m_activeShape)
 				{
-					int hIdx = hoverHandle->data(0).toInt();
-					static int lastHoverHandle = -1;
-					if (lastHoverHandle != hIdx)
-					{
-						applyHandleHover(lastHoverHandle, false);
-						applyHandleHover(hIdx, true);
-						lastHoverHandle = hIdx;
-					}
+					clearAllHandleHover();
 					ui.canvas_view_main->setCursor(Qt::SizeAllCursor);
 				}
 				else
 				{
 					clearAllHandleHover();
-					static int lastHoverHandle = -1;
-					lastHoverHandle = -1;
 					// 形状本体悬停加粗
 					bool nowHovered = m_activeShape && isPointInShape(m_activeShape, scenePos);
 					if (nowHovered != m_isShapeHovered) {
@@ -972,6 +964,36 @@ void ImageCanvasView::slotToggleLineWidth()
 	m_penWidth = m_thinLine ? 0.5 : 2.0;
 	if (m_activeShape && m_activeShape->item)
 		applyStyle(m_activeShape);
+}
+
+void ImageCanvasView::slotToggleControlPoints()
+{
+	m_showControlPoints = !m_showControlPoints;
+	ui.tool_btn_toggle_control_points->setText(m_showControlPoints ? QStringLiteral("显示控制点") : QStringLiteral("隐藏控制点"));
+
+	if (m_activeShape)
+	{
+		// 更新当前活跃形状的所有 handles 和 rotateHandle 的透明度
+		for (auto* h : m_activeShape->handles)
+		{
+			h->setOpacity(m_showControlPoints ? 1.0 : 0.0);
+		}
+		if (m_activeShape->rotateHandle)
+		{
+			m_activeShape->rotateHandle->setOpacity(m_showControlPoints ? 1.0 : 0.0);
+		}
+		// 中心十字线的透明度
+		if (m_activeShape->centerCrossH)
+			m_activeShape->centerCrossH->setOpacity(m_showControlPoints ? 1.0 : 0.0);
+		if (m_activeShape->centerCrossV)
+			m_activeShape->centerCrossV->setOpacity(m_showControlPoints ? 1.0 : 0.0);
+		// 外接矩形
+		if (m_activeShape->circumRect)
+			m_activeShape->circumRect->setOpacity(m_showControlPoints ? 1.0 : 0.0);
+		// 旋转连接线
+		if (m_activeShape->rotateStickLine)
+			m_activeShape->rotateStickLine->setOpacity(m_showControlPoints ? 1.0 : 0.0);
+	}
 }
 
 void ImageCanvasView::updateCenterCross()
@@ -2061,6 +2083,24 @@ void ImageCanvasView::showHandles(DrawShapeItem* shape)
 		shape->centerCrossV->setLine(cx, cy-kCrossLen, cx, cy+kCrossLen);
 		m_scene->addItem(shape->centerCrossH);
 		m_scene->addItem(shape->centerCrossV);
+	}
+
+	// 根据当前控制点显示状态设置透明度
+	if (!m_showControlPoints)
+	{
+		double opacity = 0.0;
+		for (auto* h : shape->handles)
+			h->setOpacity(opacity);
+		if (shape->rotateHandle)
+			shape->rotateHandle->setOpacity(opacity);
+		if (shape->centerCrossH)
+			shape->centerCrossH->setOpacity(opacity);
+		if (shape->centerCrossV)
+			shape->centerCrossV->setOpacity(opacity);
+		if (shape->circumRect)
+			shape->circumRect->setOpacity(opacity);
+		if (shape->rotateStickLine)
+			shape->rotateStickLine->setOpacity(opacity);
 	}
 }
 
