@@ -4,6 +4,8 @@
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QOpenGLWidget>
+
+
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
@@ -118,6 +120,9 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 
 bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 {
+	static QPoint lastViewPos;
+	static bool isPanning = false;
+
 	if (obj == m_drawModeOverlay)
 	{
 		if (event->type() == QEvent::MouseButtonPress ||
@@ -139,6 +144,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		if (event->type() == QEvent::Wheel)
 		{
 			QWheelEvent* wheel = static_cast<QWheelEvent*>(event);
+			if (!(wheel->modifiers() & Qt::ControlModifier)) { event->accept(); return true; }
 			QPointF oldPos = ui.canvas_view_main->mapToScene(wheel->pos());
 			m_scaleValue *= (wheel->delta() > 0 ? 1.1 : 0.9);
 			m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
@@ -148,11 +154,12 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			ui.canvas_view_main->setTransform(trans);
 
 			QPointF newPos = ui.canvas_view_main->mapToScene(wheel->pos());
-			QPointF delta = newPos - oldPos;
+			QPointF delta = oldPos - newPos;  // 补偿缩放原点偏移
 			ui.canvas_view_main->horizontalScrollBar()->setValue(
 				ui.canvas_view_main->horizontalScrollBar()->value() + qRound(delta.x()));
 			ui.canvas_view_main->verticalScrollBar()->setValue(
 				ui.canvas_view_main->verticalScrollBar()->value() + qRound(delta.y()));
+
 			ui.info_lab_scale_ratio->setText(QString("%1%").arg(qRound(m_scaleValue * 100)));
 			event->accept();
 			return true;
@@ -200,7 +207,21 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		// 点1=起点A, 点2=终点B, 点3=锁r1, 点4=锁r2
 		if (m_currentShape == Shape_Arc)
 		{
-			if (event->type() == QEvent::MouseButtonPress)
+			// 中键按下 → 画布平移
+		if (event->type() == QEvent::MouseButtonPress)
+		{
+			QMouseEvent* me = static_cast<QMouseEvent*>(event);
+			if (me->button() == Qt::MiddleButton)
+			{
+			lastViewPos = me->pos();
+				isPanning = true;
+				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
+				event->accept();
+				return true;
+			}
+		}
+
+		if (event->type() == QEvent::MouseButtonPress)
 			{
 				QMouseEvent* me = static_cast<QMouseEvent*>(event);
 				if (me->button() == Qt::LeftButton)
@@ -277,7 +298,21 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		// ===== 多边形 =====
 		if (m_currentShape == Shape_Polygon)
 		{
-			if (event->type() == QEvent::MouseButtonPress)
+			// 中键按下 → 画布平移
+		if (event->type() == QEvent::MouseButtonPress)
+		{
+			QMouseEvent* me = static_cast<QMouseEvent*>(event);
+			if (me->button() == Qt::MiddleButton)
+			{
+			lastViewPos = me->pos();
+				isPanning = true;
+				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
+				event->accept();
+				return true;
+			}
+		}
+
+		if (event->type() == QEvent::MouseButtonPress)
 			{
 				QMouseEvent* me = static_cast<QMouseEvent*>(event);
 				if (me->button() == Qt::LeftButton) {
@@ -328,7 +363,21 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			// step1→step2: 点1+点2+鼠标=三角形外心画ghost圆
 			// step2→step3: 确定第一个圆，第四点决定第二个半径
 			// step3→确认: 提交
-			if (event->type() == QEvent::MouseButtonPress)
+			// 中键按下 → 画布平移
+		if (event->type() == QEvent::MouseButtonPress)
+		{
+			QMouseEvent* me = static_cast<QMouseEvent*>(event);
+			if (me->button() == Qt::MiddleButton)
+			{
+			lastViewPos = me->pos();
+				isPanning = true;
+				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
+				event->accept();
+				return true;
+			}
+		}
+
+		if (event->type() == QEvent::MouseButtonPress)
 			{
 				QMouseEvent* me = static_cast<QMouseEvent*>(event);
 				if (me->button() == Qt::LeftButton)
@@ -485,7 +534,21 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		}
 
 			// 通用两步绘制（矩形、旋转矩形、椭圆等）
-			if (event->type() == QEvent::MouseButtonPress)
+			// 中键按下 → 画布平移
+		if (event->type() == QEvent::MouseButtonPress)
+		{
+			QMouseEvent* me = static_cast<QMouseEvent*>(event);
+			if (me->button() == Qt::MiddleButton)
+			{
+			lastViewPos = me->pos();
+				isPanning = true;
+				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
+				event->accept();
+				return true;
+			}
+		}
+
+		if (event->type() == QEvent::MouseButtonPress)
 			{
 				QMouseEvent* me = static_cast<QMouseEvent*>(event);
 				if (me->button() == Qt::LeftButton)
@@ -550,8 +613,6 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		}
 
 		// ===== 非绘制模式 =====
-		static QPoint lastViewPos;
-		static bool isPanning = false;
 
 		// MouseButtonRelease（停止拖拽）
 		if (event->type() == QEvent::MouseButtonRelease)
@@ -591,6 +652,13 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					ui.canvas_view_main->setCursor(Qt::ArrowCursor);
 					return true;
 				}
+			}
+			if (me->button() == Qt::MiddleButton && isPanning)
+			{
+				isPanning = false;
+				ui.canvas_view_main->setCursor(Qt::ArrowCursor);
+				event->accept();
+				return true;
 			}
 		}
 
@@ -677,6 +745,20 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			}
 			event->accept();
 			return true;
+		}
+
+		// 中键按下 → 画布平移
+		if (event->type() == QEvent::MouseButtonPress)
+		{
+			QMouseEvent* me = static_cast<QMouseEvent*>(event);
+			if (me->button() == Qt::MiddleButton)
+			{
+			lastViewPos = me->pos();
+				isPanning = true;
+				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
+				event->accept();
+				return true;
+			}
 		}
 
 		if (event->type() == QEvent::MouseButtonPress)
@@ -774,16 +856,11 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			}
 			}
 
-			// 空白区域 → 平移
-			lastViewPos = me->pos();
-			isPanning = true;
-			ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
-			return true;
 		}
 		else if (event->type() == QEvent::MouseMove)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
-			if (isPanning && (me->buttons() & Qt::LeftButton))
+			if (isPanning && (me->buttons() & Qt::MiddleButton))
 			{
 				QPoint delta = me->pos() - lastViewPos;
 				lastViewPos = me->pos();
