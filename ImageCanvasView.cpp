@@ -4,6 +4,7 @@
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QOpenGLWidget>
+#include <QScrollArea>
 
 
 #include <QGraphicsEllipseItem>
@@ -1312,9 +1313,18 @@ void ImageCanvasView::showParamPanel()
 		outerLayout->addWidget(titleLabel);
 		outerLayout->addSpacing(10);
 
-		// 动态内容区
-		m_paramContentLayout = new QVBoxLayout();
-		outerLayout->addLayout(m_paramContentLayout);
+		// 动态内容区包裹在 QScrollArea 中，内容过多时可滚轮操作
+		QScrollArea* scrollArea = new QScrollArea(m_paramPanel);
+		scrollArea->setWidgetResizable(true);
+		scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+		scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+		scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
+		outerLayout->addWidget(scrollArea, 1);
+
+		QWidget* scrollContent = new QWidget();
+		scrollContent->setStyleSheet("background: transparent;");
+		m_paramContentLayout = new QVBoxLayout(scrollContent);
+		scrollArea->setWidget(scrollContent);
 
 		outerLayout->addSpacing(10);
 
@@ -1348,38 +1358,86 @@ void ImageCanvasView::showParamPanel()
 	for (auto* l : m_paramLabels) { m_paramContentLayout->removeWidget(l); delete l; }
 	m_paramLabels.clear();
 
-	for (int i = 0; i < count; ++i)
+	bool isPoly = (type == Shape_Polygon);
+
+	if (isPoly)
 	{
-		QHBoxLayout* row = new QHBoxLayout();
+		// 多边形：X/Y 并排，每行一对
+		for (int i = 0; i < count / 2; ++i)
+		{
+			QHBoxLayout* row = new QHBoxLayout();
 
-		QLabel* label = new QLabel(paramNames[i], m_paramPanel);
-		label->setStyleSheet("color: #ccc; font-size: 12px; background: transparent; min-width: 50px;");
-		label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-		m_paramLabels.append(label);
+			QLabel* label = new QLabel(QStringLiteral("顶点%1").arg(i), m_paramPanel);
+			label->setStyleSheet("color: #ccc; font-size: 12px; background: transparent; min-width: 36px;");
+			label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+			m_paramLabels.append(label);
+			row->addWidget(label);
 
-		QDoubleSpinBox* spin = new QDoubleSpinBox(m_paramPanel);
-		spin->setDecimals(3);
-		// Arc 的起始角限制 [0,360)，跨度限制 [-180,180]
-		if(type==Shape_Arc && i==4)      spin->setRange(0.0, 360.0);
-		else if(type==Shape_Arc && i==5) spin->setRange(-360.0, 360.0);
-		else                             spin->setRange(-999999, 999999);
-		spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
-		spin->setFixedWidth(120);
-		spin->setValue(paramVals[i]);
-		spin->setKeyboardTracking(false);
-		connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](){
-			int idx=ui.draw_cbox_shape_type->currentIndex();if(idx<=0)return;
-			DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
-			if(s)liveApplyParam(s);
-		});
-		m_paramSpins.append(spin);
+			for (int j = 0; j < 2; ++j)
+			{
+				int idx = i * 2 + j;
+				QLabel* xyLabel = new QLabel(j==0 ? QStringLiteral("X") : QStringLiteral("Y"), m_paramPanel);
+				xyLabel->setStyleSheet("color: #999; font-size: 11px; background: transparent;");
+				m_paramLabels.append(xyLabel);
+				row->addWidget(xyLabel);
 
-		row->addWidget(label);
-		row->addWidget(spin);
-		m_paramContentLayout->addLayout(row);
+				QDoubleSpinBox* spin = new QDoubleSpinBox(m_paramPanel);
+				spin->setDecimals(3);
+				spin->setRange(-999999, 999999);
+				spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
+				spin->setFixedWidth(80);
+				spin->setValue(paramVals[idx]);
+				spin->setKeyboardTracking(false);
+				connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](){
+					int idx=ui.draw_cbox_shape_type->currentIndex();if(idx<=0)return;
+					DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
+					if(s)liveApplyParam(s);
+				});
+				m_paramSpins.append(spin);
+				row->addWidget(spin);
+			}
+
+			m_paramContentLayout->addLayout(row);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < count; ++i)
+		{
+			QHBoxLayout* row = new QHBoxLayout();
+
+			QLabel* label = new QLabel(paramNames[i], m_paramPanel);
+			label->setStyleSheet("color: #ccc; font-size: 12px; background: transparent; min-width: 50px;");
+			label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+			m_paramLabels.append(label);
+
+			QDoubleSpinBox* spin = new QDoubleSpinBox(m_paramPanel);
+			spin->setDecimals(3);
+			if(type==Shape_Arc && i==4)      spin->setRange(0.0, 360.0);
+			else if(type==Shape_Arc && i==5) spin->setRange(-360.0, 360.0);
+			else                             spin->setRange(-999999, 999999);
+			spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
+			spin->setFixedWidth(120);
+			spin->setValue(paramVals[i]);
+			spin->setKeyboardTracking(false);
+			connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](){
+				int idx=ui.draw_cbox_shape_type->currentIndex();if(idx<=0)return;
+				DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
+				if(s)liveApplyParam(s);
+			});
+			m_paramSpins.append(spin);
+
+			row->addWidget(label);
+			row->addWidget(spin);
+			m_paramContentLayout->addLayout(row);
+		}
 	}
 
-	m_paramPanel->setGeometry(parent->contentsRect());
+	// 限制面板高度，内容过多时 QScrollArea 生效
+	QRect parentRect = parent->contentsRect();
+	if (parentRect.height() > 400)
+		parentRect.setHeight(qMin(parentRect.height(), 400));
+	m_paramPanel->setGeometry(parentRect);
 	m_paramPanel->show();
 	m_paramPanel->raise();
 }
