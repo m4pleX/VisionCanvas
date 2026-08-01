@@ -329,7 +329,7 @@ QPushButton:pressed{
 </string>
               </property>
               <property name="text">
-               <string>显示控制点</string>
+               <string>隐藏控制点</string>
               </property>
              </widget>
             </item>
@@ -361,7 +361,7 @@ QPushButton:pressed{
 </string>
               </property>
               <property name="text">
-               <string>线粗/细</string>
+               <string>切换为细线</string>
               </property>
              </widget>
             </item>

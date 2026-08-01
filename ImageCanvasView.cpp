@@ -1,6 +1,7 @@
 #include "ImageCanvasView.h"
 #include "ShapePainter.h"
 #include "ShapeHandleHelper.h"
+#include "ParamPanelWidget.h"
 
 #include <QtAlgorithms>
 #include <QPainterPath>
@@ -971,6 +972,7 @@ void ImageCanvasView::slotToggleCenterCross()
 	m_showCenterCross = !m_showCenterCross;
 	m_crossH->setVisible(m_showCenterCross);
 	m_crossV->setVisible(m_showCenterCross);
+	ui.tool_btn_toggle_cross->setText(m_showCenterCross ? QStringLiteral("隐藏十字线") : QStringLiteral("显示十字线"));
 	updateCenterCross();
 }
 
@@ -978,6 +980,7 @@ void ImageCanvasView::slotToggleLineWidth()
 {
 	m_thinLine = !m_thinLine;
 	m_penWidth = m_thinLine ? 0.5 : 2.0;
+	ui.tool_btn_toggle_line_width->setText(m_thinLine ? QStringLiteral("切换为粗线") : QStringLiteral("切换为细线"));
 	if (m_shapeItem)
 		m_painter->applyStyle(m_shapeItem, m_colorSelected, m_penWidth, m_isShapeHovered);
 }
@@ -985,7 +988,7 @@ void ImageCanvasView::slotToggleLineWidth()
 void ImageCanvasView::slotToggleControlPoints()
 {
 	m_showControlPoints = !m_showControlPoints;
-	ui.tool_btn_toggle_control_points->setText(m_showControlPoints ? QStringLiteral("显示控制点") : QStringLiteral("隐藏控制点"));
+	ui.tool_btn_toggle_control_points->setText(m_showControlPoints ? QStringLiteral("隐藏控制点") : QStringLiteral("显示控制点"));
 	if (m_activeHandleSet)
 		m_handleHelper->setHandlesVisible(*m_activeHandleSet, m_showControlPoints);
 }
@@ -1181,234 +1184,116 @@ void ImageCanvasView::hideDrawModeOverlay()
 
 // ===== 参数面板 =====
 
+QList<ParamField> ImageCanvasView::buildParamFields(DrawShapeType type) const {
+	QList<ParamField> fields;
+	switch (type) {
+	case Shape_Rect:
+		fields = {
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cx;}, [](DrawShapeItem& s,double v){s.rect.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cy;}, [](DrawShapeItem& s,double v){s.rect.cy=v;}},
+			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.w;},  [](DrawShapeItem& s,double v){s.rect.w=v;}},
+			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.h;},  [](DrawShapeItem& s,double v){s.rect.h=v;}},
+		}; break;
+	case Shape_RotateRect:
+		fields = {
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cx;}, [](DrawShapeItem& s,double v){s.rotatedRect.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cy;}, [](DrawShapeItem& s,double v){s.rotatedRect.cy=v;}},
+			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.w;},  [](DrawShapeItem& s,double v){s.rotatedRect.w=v;}},
+			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.h;},  [](DrawShapeItem& s,double v){s.rotatedRect.h=v;}},
+			{QStringLiteral("角度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.angle;}, [](DrawShapeItem& s,double v){s.rotatedRect.angle=v;}},
+		}; break;
+	case Shape_Circle:
+		fields = {
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cx;}, [](DrawShapeItem& s,double v){s.circle.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cy;}, [](DrawShapeItem& s,double v){s.circle.cy=v;}},
+			{QStringLiteral("半径"),   -999999, 999999, [](const DrawShapeItem& s){return s.circle.r;},  [](DrawShapeItem& s,double v){s.circle.r=v;}},
+		}; break;
+	case Shape_Ellipse:
+		fields = {
+			{QStringLiteral("中心 X"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cx;}, [](DrawShapeItem& s,double v){s.ellipse.cx=v;}},
+			{QStringLiteral("中心 Y"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cy;}, [](DrawShapeItem& s,double v){s.ellipse.cy=v;}},
+			{QStringLiteral("半轴 r1"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r1;}, [](DrawShapeItem& s,double v){s.ellipse.r1=v;}},
+			{QStringLiteral("半轴 r2"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r2;}, [](DrawShapeItem& s,double v){s.ellipse.r2=v;}},
+			{QStringLiteral("角度"),    -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.angle;}, [](DrawShapeItem& s,double v){s.ellipse.angle=v;}},
+		}; break;
+	case Shape_Ring:
+		fields = {
+			{QStringLiteral("中心 X"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cx;}, [](DrawShapeItem& s,double v){s.ring.cx=v;}},
+			{QStringLiteral("中心 Y"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cy;}, [](DrawShapeItem& s,double v){s.ring.cy=v;}},
+			{QStringLiteral("半径 r1"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r1;}, [](DrawShapeItem& s,double v){s.ring.r1=v;}},
+			{QStringLiteral("半径 r2"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r2;}, [](DrawShapeItem& s,double v){s.ring.r2=v;}},
+		}; break;
+	case Shape_Arc:
+		fields = {
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cx;},    [](DrawShapeItem& s,double v){s.arc.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cy;},    [](DrawShapeItem& s,double v){s.arc.cy=v;}},
+			{QStringLiteral("半径1"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rOuter;}, [](DrawShapeItem& s,double v){s.arc.rOuter=v;}},
+			{QStringLiteral("半径2"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rInner;}, [](DrawShapeItem& s,double v){s.arc.rInner=v;}},
+			{QStringLiteral("起始角"), 0.0, 360.0, [](const DrawShapeItem& s){return s.arc.startAngle;}, [](DrawShapeItem& s,double v){s.arc.startAngle=v;}},
+			{QStringLiteral("跨度"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.arc.r1;},       [](DrawShapeItem& s,double v){s.arc.r1=v;}},
+		}; break;
+	case Shape_Polygon:
+		// 动态处理
+		break;
+	default: break;
+	}
+	return fields;
+}
+
 void ImageCanvasView::slotOpenParamPanel() { showParamPanel(); }
 
-void ImageCanvasView::showParamPanel()
-{
+void ImageCanvasView::showParamPanel() {
 	int index = ui.draw_cbox_shape_type->currentIndex();
 	if (index <= 0) return;
 	DrawShapeType type = static_cast<DrawShapeType>(index - 1);
-
-	// 各形状的参数名和数量
-	QStringList paramNames;
-	QVector<double> paramVals;
-	int count = 0;
-
-	switch (type)
-	{
-	case Shape_Rect:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("宽度") << QStringLiteral("高度");
-		count = 4;
-		break;
-	case Shape_RotateRect:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("宽度") << QStringLiteral("高度") << QStringLiteral("角度");
-		count = 5;
-		break;
-	case Shape_Circle:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半径");
-		count = 3;
-		break;
-	case Shape_Ellipse:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半轴 r1") << QStringLiteral("半轴 r2") << QStringLiteral("角度");
-		count = 5;
-		break;
-	case Shape_Ring:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半径 r1") << QStringLiteral("半径 r2");
-		count = 4;
-		break;
-	case Shape_Arc:
-		paramNames << QStringLiteral("中心 X") << QStringLiteral("中心 Y") << QStringLiteral("半径1") << QStringLiteral("半径2") << QStringLiteral("起始角") << QStringLiteral("跨度");
-		count = 6; break;
-	case Shape_Polygon:
-		// 动态：根据实际顶点数生成参数，在下面处理
-		count = 0; break;
-	default:
-		paramNames << QStringLiteral("暂无参数");
-		count = 0;
-		break;
-	}
-
-	paramVals.resize(count);
-	paramVals.fill(0);
-
 	DrawShapeItem* existing = findShapeByType(type);
-	if (existing)
-	{
-		switch (type)
-		{
-		case Shape_Rect:
-			paramVals[0]=existing->rect.cx; paramVals[1]=existing->rect.cy; paramVals[2]=existing->rect.w; paramVals[3]=existing->rect.h;
-			break;
-		case Shape_RotateRect:
-			paramVals[0]=existing->rotatedRect.cx; paramVals[1]=existing->rotatedRect.cy; paramVals[2]=existing->rotatedRect.w; paramVals[3]=existing->rotatedRect.h; paramVals[4]=existing->rotatedRect.angle;
-			break;
-		case Shape_Circle:
-			paramVals[0]=existing->circle.cx; paramVals[1]=existing->circle.cy; paramVals[2]=existing->circle.r;
-			break;
-		case Shape_Ellipse:
-			paramVals[0]=existing->ellipse.cx; paramVals[1]=existing->ellipse.cy; paramVals[2]=existing->ellipse.r1; paramVals[3]=existing->ellipse.r2; paramVals[4]=existing->ellipse.angle;
-			break;
-		case Shape_Ring:
-			paramVals[0]=existing->ring.cx; paramVals[1]=existing->ring.cy; paramVals[2]=existing->ring.r1; paramVals[3]=existing->ring.r2;
-			break;
-		case Shape_Arc:
-			paramVals[0]=existing->arc.cx; paramVals[1]=existing->arc.cy;
-			paramVals[2]=existing->arc.rOuter; paramVals[3]=existing->arc.rInner;
-			paramVals[4]=existing->arc.startAngle; paramVals[5]=existing->arc.r1;
-			break;
-		case Shape_Polygon:
-			// 动态生成每个顶点的 X, Y 参数
-			{
-				int np=existing->polygon.pts.size();paramNames.clear();paramVals.clear();
-				for(int i=0;i<np;++i){paramNames<<QStringLiteral("顶点")+QString::number(i)+QStringLiteral(" X")<<QStringLiteral("顶点")+QString::number(i)+QStringLiteral(" Y");paramVals<<existing->polygon.pts[i].x()<<existing->polygon.pts[i].y();}
-				count=paramNames.size();
-			}
-			break;
-		default: break;
-		}
-	}
 
-	QWidget* parent = ui.group_draw_opt;
-	if (!m_paramPanel)
-	{
-		m_paramPanel = new QWidget(parent);
-		m_paramPanel->setObjectName("paramPanel");
-		m_paramPanel->setStyleSheet("QWidget#paramPanel { background-color: rgba(50, 50, 50, 220); border-radius: 6px; }");
+	if (!m_paramPanel) {
+		m_paramPanel = new ParamPanelWidget(ui.group_draw_opt);
 		m_paramPanel->installEventFilter(this);
-
-		QVBoxLayout* outerLayout = new QVBoxLayout(m_paramPanel);
-		outerLayout->setAlignment(Qt::AlignCenter);
-
-		QLabel* titleLabel = new QLabel(QStringLiteral("参数设置"), m_paramPanel);
-		titleLabel->setStyleSheet("color: white; font-size: 14px; font-weight: bold; background: transparent;");
-		titleLabel->setAlignment(Qt::AlignCenter);
-		outerLayout->addWidget(titleLabel);
-		outerLayout->addSpacing(10);
-
-		// 动态内容区包裹在 QScrollArea 中，内容过多时可滚轮操作
-		QScrollArea* scrollArea = new QScrollArea(m_paramPanel);
-		scrollArea->setWidgetResizable(true);
-		scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-		scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-		scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
-		outerLayout->addWidget(scrollArea, 1);
-
-		QWidget* scrollContent = new QWidget();
-		scrollContent->setStyleSheet("background: transparent;");
-		m_paramContentLayout = new QVBoxLayout(scrollContent);
-		scrollArea->setWidget(scrollContent);
-
-		outerLayout->addSpacing(10);
-
-		QHBoxLayout* btnLayout = new QHBoxLayout();
-		btnLayout->setAlignment(Qt::AlignCenter);
-
-		QPushButton* btnOk = new QPushButton(QStringLiteral("确定"), m_paramPanel);
-		btnOk->setFixedSize(80, 30);
-		btnOk->setStyleSheet("QPushButton { background-color: #2ecc71; color: white; border: none; border-radius: 4px; font-size: 13px; }"
-			"QPushButton:hover { background-color: #27ae60; }");
-		btnOk->setFocusPolicy(Qt::NoFocus);
-
-		QPushButton* btnCancel = new QPushButton(QStringLiteral("取消"), m_paramPanel);
-		btnCancel->setFixedSize(80, 30);
-		btnCancel->setStyleSheet("QPushButton { background-color: #e74c3c; color: white; border: none; border-radius: 4px; font-size: 13px; }"
-			"QPushButton:hover { background-color: #c0392b; }");
-		btnCancel->setFocusPolicy(Qt::NoFocus);
-
-		btnLayout->addWidget(btnOk);
-		btnLayout->addSpacing(15);
-		btnLayout->addWidget(btnCancel);
-		outerLayout->addLayout(btnLayout);
-
-		connect(btnOk, &QPushButton::clicked, this, &ImageCanvasView::applyParamAndRedraw);
-		connect(btnCancel, &QPushButton::clicked, this, &ImageCanvasView::hideParamPanel);
-	}
-
-	// 重建动态内容（删除旧的 spin/label）
-	for (auto* s : m_paramSpins) { m_paramContentLayout->removeWidget(s); delete s; }
-	m_paramSpins.clear();
-	for (auto* l : m_paramLabels) { m_paramContentLayout->removeWidget(l); delete l; }
-	m_paramLabels.clear();
-
-	bool isPoly = (type == Shape_Polygon);
-
-	if (isPoly)
-	{
-		// 多边形：X/Y 并排，每行一对
-		for (int i = 0; i < count / 2; ++i)
-		{
-			QHBoxLayout* row = new QHBoxLayout();
-
-			QLabel* label = new QLabel(QStringLiteral("顶点%1").arg(i), m_paramPanel);
-			label->setStyleSheet("color: #ccc; font-size: 12px; background: transparent; min-width: 36px;");
-			label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-			m_paramLabels.append(label);
-			row->addWidget(label);
-
-			for (int j = 0; j < 2; ++j)
-			{
-				int idx = i * 2 + j;
-				QLabel* xyLabel = new QLabel(j==0 ? QStringLiteral("X") : QStringLiteral("Y"), m_paramPanel);
-				xyLabel->setStyleSheet("color: #999; font-size: 11px; background: transparent;");
-				m_paramLabels.append(xyLabel);
-				row->addWidget(xyLabel);
-
-				QDoubleSpinBox* spin = new QDoubleSpinBox(m_paramPanel);
-				spin->setDecimals(3);
-				spin->setRange(-999999, 999999);
-				spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
-				spin->setFixedWidth(80);
-				spin->setValue(paramVals[idx]);
-				spin->setKeyboardTracking(false);
-				connect(spin, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](){
-					int idx=ui.draw_cbox_shape_type->currentIndex();if(idx<=0)return;
-					DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
-					if(s)liveApplyParam(s);
-				});
-				m_paramSpins.append(spin);
-				row->addWidget(spin);
+		connect(m_paramPanel, &ParamPanelWidget::confirmed, this, &ImageCanvasView::applyParamAndRedraw);
+		connect(m_paramPanel, &ParamPanelWidget::cancelled,  this, &ImageCanvasView::hideParamPanel);
+		connect(m_paramPanel, &ParamPanelWidget::valueChanged, this, [this](){
+			int idx=ui.draw_cbox_shape_type->currentIndex(); if(idx<=0)return;
+			DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
+			if(s) {
+				QList<ParamField> fields;
+				if (s->type == Shape_Polygon) {
+					for (int i = 0; i < s->polygon.pts.size(); ++i) {
+						int vi = i;
+						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].x();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].rx()=v;}});
+						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].ry()=v;}});
+					}
+				} else {
+					fields = buildParamFields(s->type);
+				}
+				m_paramPanel->applyValues(fields, *s);
+				if (m_shapeItem) { m_scene->removeItem(m_shapeItem); delete m_shapeItem; m_shapeItem = nullptr; }
+				if (m_activeHandleSet) m_handleHelper->clearHandles(*m_activeHandleSet);
+				rebuildShapeOnScene(s);
 			}
-
-			m_paramContentLayout->addLayout(row);
-		}
-	}
-	else
-	{
-		for (int i = 0; i < count; ++i)
-		{
-			QHBoxLayout* row = new QHBoxLayout();
-
-			QLabel* label = new QLabel(paramNames[i], m_paramPanel);
-			label->setStyleSheet("color: #ccc; font-size: 12px; background: transparent; min-width: 50px;");
-			label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-			m_paramLabels.append(label);
-
-			QDoubleSpinBox* spin = new QDoubleSpinBox(m_paramPanel);
-			spin->setDecimals(3);
-			if(type==Shape_Arc && i==4)      spin->setRange(0.0, 360.0);
-			else if(type==Shape_Arc && i==5) spin->setRange(-360.0, 360.0);
-			else                             spin->setRange(-999999, 999999);
-			spin->setStyleSheet("QDoubleSpinBox { background: #3a3a3a; color: white; border: 1px solid #666; border-radius: 3px; padding: 3px; }");
-			spin->setFixedWidth(120);
-			spin->setValue(paramVals[i]);
-			spin->setKeyboardTracking(false);
-			connect(spin, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](){
-				int idx=ui.draw_cbox_shape_type->currentIndex();if(idx<=0)return;
-				DrawShapeItem* s=findShapeByType(static_cast<DrawShapeType>(idx-1));
-				if(s)liveApplyParam(s);
-			});
-			m_paramSpins.append(spin);
-
-			row->addWidget(label);
-			row->addWidget(spin);
-			m_paramContentLayout->addLayout(row);
-		}
+		});
 	}
 
-	// 限制面板高度，内容过多时 QScrollArea 生效
-	QRect parentRect = parent->contentsRect();
-	if (parentRect.height() > 400)
-		parentRect.setHeight(qMin(parentRect.height(), 400));
+	QList<ParamField> fields;
+	if (type == Shape_Polygon && existing) {
+		for (int i = 0; i < existing->polygon.pts.size(); ++i) {
+			int idx = i;
+			fields.append({QString(), -999999, 999999,
+				[idx](const DrawShapeItem& s){return s.polygon.pts[idx].x();},
+				[idx](DrawShapeItem& s,double v){s.polygon.pts[idx].rx()=v;}});
+			fields.append({QString(), -999999, 999999,
+				[idx](const DrawShapeItem& s){return s.polygon.pts[idx].y();},
+				[idx](DrawShapeItem& s,double v){s.polygon.pts[idx].ry()=v;}});
+		}
+	} else {
+		fields = buildParamFields(type);
+	}
+
+	m_paramPanel->buildUI(fields, existing, type == Shape_Polygon);
+
+	QRect parentRect = ui.group_draw_opt->contentsRect();
+	if (parentRect.height() > 400) parentRect.setHeight(400);
 	m_paramPanel->setGeometry(parentRect);
 	m_paramPanel->show();
 	m_paramPanel->raise();
@@ -1416,75 +1301,43 @@ void ImageCanvasView::showParamPanel()
 
 void ImageCanvasView::hideParamPanel() { if (m_paramPanel) m_paramPanel->hide(); }
 
-// 拖拽过程中实时刷新参数面板数值
-void ImageCanvasView::syncParamPanel(DrawShapeItem* shape)
-{
-	if(!m_paramPanel||m_paramPanel->isHidden()||!shape)return;
-	switch(shape->type){
-	case Shape_Rect:
-		if(m_paramSpins.size()>=4){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[0]->setValue(shape->rect.cx);m_paramSpins[1]->setValue(shape->rect.cy);m_paramSpins[2]->setValue(shape->rect.w);m_paramSpins[3]->setValue(shape->rect.h);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);}break;
-	case Shape_RotateRect:
-		if(m_paramSpins.size()>=5){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[4]->blockSignals(true);m_paramSpins[0]->setValue(shape->rotatedRect.cx);m_paramSpins[1]->setValue(shape->rotatedRect.cy);m_paramSpins[2]->setValue(shape->rotatedRect.w);m_paramSpins[3]->setValue(shape->rotatedRect.h);m_paramSpins[4]->setValue(shape->rotatedRect.angle);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);m_paramSpins[4]->blockSignals(false);}break;
-	case Shape_Circle:
-		if(m_paramSpins.size()>=3){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[0]->setValue(shape->circle.cx);m_paramSpins[1]->setValue(shape->circle.cy);m_paramSpins[2]->setValue(shape->circle.r);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);}break;
-	case Shape_Ellipse:
-		if(m_paramSpins.size()>=5){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[4]->blockSignals(true);m_paramSpins[0]->setValue(shape->ellipse.cx);m_paramSpins[1]->setValue(shape->ellipse.cy);m_paramSpins[2]->setValue(shape->ellipse.r1);m_paramSpins[3]->setValue(shape->ellipse.r2);m_paramSpins[4]->setValue(shape->ellipse.angle);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);m_paramSpins[4]->blockSignals(false);}break;
-	case Shape_Ring:
-		if(m_paramSpins.size()>=4){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[0]->setValue(shape->ring.cx);m_paramSpins[1]->setValue(shape->ring.cy);m_paramSpins[2]->setValue(shape->ring.r1);m_paramSpins[3]->setValue(shape->ring.r2);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);}break;
-	case Shape_Arc:
-		if(m_paramSpins.size()>=6){m_paramSpins[0]->blockSignals(true);m_paramSpins[1]->blockSignals(true);m_paramSpins[2]->blockSignals(true);m_paramSpins[3]->blockSignals(true);m_paramSpins[4]->blockSignals(true);m_paramSpins[5]->blockSignals(true);m_paramSpins[0]->setValue(shape->arc.cx);m_paramSpins[1]->setValue(shape->arc.cy);m_paramSpins[2]->setValue(shape->arc.rOuter);m_paramSpins[3]->setValue(shape->arc.rInner);m_paramSpins[4]->setValue(shape->arc.startAngle);m_paramSpins[5]->setValue(shape->arc.r1);m_paramSpins[0]->blockSignals(false);m_paramSpins[1]->blockSignals(false);m_paramSpins[2]->blockSignals(false);m_paramSpins[3]->blockSignals(false);m_paramSpins[4]->blockSignals(false);m_paramSpins[5]->blockSignals(false);}break;
-	case Shape_Polygon:
-		{
-			int np=(int)shape->polygon.pts.size();
-			if(m_paramSpins.size()>=(int)np*2){
-				for(int i=0;i<np;++i){m_paramSpins[i*2]->blockSignals(true);m_paramSpins[i*2+1]->blockSignals(true);}
-				for(int i=0;i<np;++i){m_paramSpins[i*2]->setValue(shape->polygon.pts[i].x());m_paramSpins[i*2+1]->setValue(shape->polygon.pts[i].y());}
-				for(int i=0;i<np;++i){m_paramSpins[i*2]->blockSignals(false);m_paramSpins[i*2+1]->blockSignals(false);}
-			}
-		}break;
-	default:break;
+void ImageCanvasView::syncParamPanel(DrawShapeItem* shape) {
+	if (!m_paramPanel || !shape) return;
+	QList<ParamField> fields;
+	if (shape->type == Shape_Polygon) {
+		for (int i = 0; i < shape->polygon.pts.size(); ++i) {
+			int vi = i;
+			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].x();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].rx()=v;}});
+			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].ry()=v;}});
+		}
+	} else {
+		fields = buildParamFields(shape->type);
 	}
+	m_paramPanel->syncValues(fields, *shape);
 }
 
-// 从参数面板读取值应用到 shape，不关闭面板
-void ImageCanvasView::liveApplyParam(DrawShapeItem* shape)
-{
-	if(!shape||m_paramSpins.isEmpty())return;
-	int n=m_paramSpins.size();
-	switch(shape->type){
-	case Shape_Rect:
-		if(n>=4){shape->rect.cx=m_paramSpins[0]->value();shape->rect.cy=m_paramSpins[1]->value();shape->rect.w=m_paramSpins[2]->value();shape->rect.h=m_paramSpins[3]->value();}break;
-	case Shape_RotateRect:
-		if(n>=5){shape->rotatedRect.cx=m_paramSpins[0]->value();shape->rotatedRect.cy=m_paramSpins[1]->value();shape->rotatedRect.w=m_paramSpins[2]->value();shape->rotatedRect.h=m_paramSpins[3]->value();shape->rotatedRect.angle=m_paramSpins[4]->value();}break;
-	case Shape_Circle:
-		if(n>=3){shape->circle.cx=m_paramSpins[0]->value();shape->circle.cy=m_paramSpins[1]->value();shape->circle.r=m_paramSpins[2]->value();}break;
-	case Shape_Ellipse:
-		if(n>=5){shape->ellipse.cx=m_paramSpins[0]->value();shape->ellipse.cy=m_paramSpins[1]->value();shape->ellipse.r1=m_paramSpins[2]->value();shape->ellipse.r2=m_paramSpins[3]->value();shape->ellipse.angle=m_paramSpins[4]->value();}break;
-	case Shape_Ring:
-		if(n>=4){shape->ring.cx=m_paramSpins[0]->value();shape->ring.cy=m_paramSpins[1]->value();shape->ring.r1=m_paramSpins[2]->value();shape->ring.r2=m_paramSpins[3]->value();}break;
-	case Shape_Arc:
-		if(n>=6){shape->arc.cx=m_paramSpins[0]->value();shape->arc.cy=m_paramSpins[1]->value();shape->arc.rOuter=m_paramSpins[2]->value();shape->arc.rInner=m_paramSpins[3]->value();shape->arc.startAngle=m_paramSpins[4]->value();shape->arc.r1=m_paramSpins[5]->value();shape->arc.endAngle=shape->arc.startAngle+shape->arc.r1;}break;
-	case Shape_Polygon:{
-		int np=(int)shape->polygon.pts.size();if(n>=np*2)for(int i=0;i<np;++i)shape->polygon.pts[i]=QPointF(m_paramSpins[i*2]->value(),m_paramSpins[i*2+1]->value());}break;
-	default:break;
-	}
-	if (m_shapeItem) { m_scene->removeItem(m_shapeItem); delete m_shapeItem; m_shapeItem = nullptr; }
-	if (m_activeHandleSet) m_handleHelper->clearHandles(*m_activeHandleSet);
-	rebuildShapeOnScene(shape);
-}
-
-void ImageCanvasView::applyParamAndRedraw()
-{
+void ImageCanvasView::applyParamAndRedraw() {
 	int index = ui.draw_cbox_shape_type->currentIndex();
 	if (index <= 0) return;
 	DrawShapeType type = static_cast<DrawShapeType>(index - 1);
-
 	DrawShapeItem* shape = findShapeByType(type);
 	if (!shape) { shape = new DrawShapeItem(type); m_shapes.append(shape); }
+
+	QList<ParamField> fields;
+	if (type == Shape_Polygon) {
+		for (int i = 0; i < shape->polygon.pts.size(); ++i) {
+			int idx = i;
+			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.polygon.pts[idx].x();}, [idx](DrawShapeItem& s,double v){s.polygon.pts[idx].rx()=v;}});
+			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.polygon.pts[idx].y();}, [idx](DrawShapeItem& s,double v){s.polygon.pts[idx].ry()=v;}});
+		}
+	} else {
+		fields = buildParamFields(type);
+	}
+	m_paramPanel->applyValues(fields, *shape);
+
 	clearSceneShape();
 	m_activeShape = shape;
-
-	liveApplyParam(shape);
+	rebuildShapeOnScene(shape);
 	hideParamPanel();
 }
 

@@ -96,16 +96,17 @@
     <QtUic Include="ImageCanvasView.ui" />
     <ClCompile Include="ImageCanvasView.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ParamPanelWidget.cpp" />
     <ClCompile Include="ShapeHandleHelper.cpp" />
     <ClCompile Include="ShapePainter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageCanvasView.h" />
     <ClInclude Include="DrawShapeData.h" />
+    <QtMoc Include="ParamPanelWidget.h" />
     <ClInclude Include="ShapeHandleHelper.h" />
     <ClInclude Include="ShapePainter.h" />
   </ItemGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
     <Import Project="$(QtMsBuild)\qt.targets" />

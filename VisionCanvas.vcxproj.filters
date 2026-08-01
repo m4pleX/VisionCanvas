@@ -43,16 +43,19 @@
     <ClCompile Include="ShapePainter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ParamPanelWidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageCanvasView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="ParamPanelWidget.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ShapeStyleConfig.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DrawShapeData.h">
       <Filter>Header Files</Filter>
     </ClInclude>

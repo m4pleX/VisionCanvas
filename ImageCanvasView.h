@@ -4,7 +4,6 @@
 #include "ui_ImageCanvasView.h"
 #include "DrawShapeData.h"
 
-class QDoubleSpinBox;
 class QGraphicsEllipseItem;
 class QGraphicsItem;
 class QGraphicsLineItem;
@@ -13,9 +12,10 @@ class QGraphicsPixmapItem;
 class QGraphicsRectItem;
 class QGraphicsScene;
 class QKeyEvent;
-class QLabel;
 class QPushButton;
 
+class ParamPanelWidget;
+struct ParamField;
 class ShapePainter;
 class ShapeHandleHelper;
 struct ShapeHandleSet;
@@ -62,10 +62,7 @@ private:
 	QWidget* m_drawModeOverlay = nullptr;
 	QPushButton* m_btnCancelDraw = nullptr;
 
-	QWidget* m_paramPanel = nullptr;
-	QVBoxLayout* m_paramContentLayout = nullptr;
-	QList<QDoubleSpinBox*> m_paramSpins;
-	QList<QLabel*> m_paramLabels;
+	class ParamPanelWidget* m_paramPanel = nullptr;
 
 	QLabel* m_infoLabel = nullptr;
 
@@ -138,8 +135,8 @@ private:
 	void showParamPanel();
 	void hideParamPanel();
 	void applyParamAndRedraw();
-	void liveApplyParam(DrawShapeItem* shape);
 	void syncParamPanel(DrawShapeItem* shape);
+	QList<struct ParamField> buildParamFields(DrawShapeType type) const;
 
 	void startDraw(DrawShapeType type);
 	void stopDraw();
