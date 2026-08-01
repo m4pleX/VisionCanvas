@@ -35,10 +35,6 @@ public:
 	void updatePositions(const DrawShapeItem& shape, ShapeHandleSet& hs, QGraphicsItem* shapeItem);
 	void clearHandles(ShapeHandleSet& hs);
 
-	static void applyHover(QGraphicsEllipseItem* h, bool hover);
-	void clearAllHover(const ShapeHandleSet& hs);
-	void setHoverAt(const ShapeHandleSet& hs, int index, bool hover);
-
 	QGraphicsEllipseItem* handleAt(const ShapeHandleSet& hs, const QPointF& scenePos) const;
 	void setHandlesVisible(ShapeHandleSet& hs, bool visible);
 

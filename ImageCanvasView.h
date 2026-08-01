@@ -164,7 +164,5 @@ private:
 	void updateRingFromHandle(const QPointF& scenePos);
 	void updateArcFromHandle(const QPointF& scenePos);
 	void updatePolygonFromHandle(const QPointF& scenePos);
-	void applyHandleHover(int handleIndex, bool hover);
 	void applyShapeHover(bool hover);
-	void clearAllHandleHover();
 };

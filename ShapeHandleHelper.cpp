@@ -25,23 +25,7 @@ void ShapeHandleHelper::setHandlesVisible(ShapeHandleSet& hs, bool visible) {
 	if (hs.rotateStickLine) hs.rotateStickLine->setOpacity(o);
 }
 
-void ShapeHandleHelper::applyHover(QGraphicsEllipseItem* h, bool hover) {
-	QPointF c = h->rect().center();
-	double r = hover ? kHandleRadius + 2 : kHandleRadius;
-	h->setRect(c.x() - r, c.y() - r, r * 2, r * 2);
-	h->setPen(hover ? QPen(QColor(255, 200, 0), 2) : QPen(Qt::white, 1));
-	h->setBrush(hover ? QColor(255, 200, 0) : QColor(0, 180, 255));
-}
 
-void ShapeHandleHelper::clearAllHover(const ShapeHandleSet& hs) {
-	for (int i = 0; i < hs.handles.size(); ++i)
-		applyHover(hs.handles[i], false);
-}
-
-void ShapeHandleHelper::setHoverAt(const ShapeHandleSet& hs, int index, bool hover) {
-	if (index >= 0 && index < hs.handles.size())
-		applyHover(hs.handles[index], hover);
-}
 
 QGraphicsEllipseItem* ShapeHandleHelper::handleAt(const ShapeHandleSet& hs, const QPointF& scenePos) const {
 	if (hs.rotateHandle && hs.rotateHandle->isVisible()

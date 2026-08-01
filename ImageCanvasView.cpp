@@ -657,7 +657,6 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					m_isDraggingHandle = false;
 					m_dragShape = nullptr;
 					m_dragHandleIndex = -1;
-					clearAllHandleHover();
 					ui.canvas_view_main->setCursor(Qt::CrossCursor);
 					event->accept();
 					return true;
@@ -896,12 +895,10 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				QGraphicsEllipseItem* hoverHandle = handleAt(scenePos);
 				if (hoverHandle && m_activeShape)
 				{
-					clearAllHandleHover();
 					ui.canvas_view_main->setCursor(Qt::SizeAllCursor);
 				}
 				else
 				{
-					clearAllHandleHover();
 					// 形状本体悬停加粗
 					bool nowHovered = m_activeShape && isPointInShape(m_activeShape, scenePos);
 					if (nowHovered != m_isShapeHovered) {
@@ -1653,17 +1650,7 @@ QGraphicsEllipseItem* ImageCanvasView::handleAt(const QPointF& scenePos) const
 
 // ===== Handle 拖拽 =====
 
-void ImageCanvasView::applyHandleHover(int handleIndex, bool hover)
-{
-	if (m_activeHandleSet)
-		m_handleHelper->setHoverAt(*m_activeHandleSet, handleIndex, hover);
-}
 
-void ImageCanvasView::clearAllHandleHover()
-{
-	if (m_activeHandleSet)
-		m_handleHelper->clearAllHover(*m_activeHandleSet);
-}
 
 void ImageCanvasView::applyShapeHover(bool hover)
 {
