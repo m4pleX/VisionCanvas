@@ -1,76 +1,24 @@
 #pragma once
 
 #include <QtWidgets/QMainWindow>
-#include <QKeyEvent>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsLineItem>
 #include "ui_ImageCanvasView.h"
+#include "DrawShapeData.h"
 
 class QDoubleSpinBox;
-class QGraphicsScene;
+class QGraphicsEllipseItem;
+class QGraphicsItem;
+class QGraphicsLineItem;
+class QGraphicsPathItem;
 class QGraphicsPixmapItem;
 class QGraphicsRectItem;
+class QGraphicsScene;
+class QKeyEvent;
 class QLabel;
 class QPushButton;
 
-// 控制点 & 中心十字 常量
-static const double kHandleRadius = 4.0;
-static const double kCrossLen = 6.0;
-
-// 控制点 hover
-inline void setHandleHover(QGraphicsEllipseItem* h, bool hover) {
-	QPointF c = h->rect().center();
-	double r = hover ? kHandleRadius + 2 : kHandleRadius;
-	h->setRect(c.x() - r, c.y() - r, r * 2, r * 2);
-	h->setPen(hover ? QPen(QColor(255, 200, 0), 2) : QPen(Qt::white, 1));
-	h->setBrush(hover ? QColor(255, 200, 0) : QColor(0, 180, 255));
-}
-
-inline void moveHandle(QGraphicsEllipseItem* h, const QPointF& center) {
-	h->setRect(center.x() - kHandleRadius, center.y() - kHandleRadius,
-	           kHandleRadius * 2, kHandleRadius * 2);
-}
-
-enum DrawShapeType
-{
-	Shape_Rect,
-	Shape_RotateRect,
-	Shape_Circle,
-	Shape_Ellipse,
-	Shape_Ring,
-	Shape_Arc,
-	Shape_Polygon
-};
-
-struct DrawShapeItem
-{
-	DrawShapeType type;
-	QGraphicsItem* item = nullptr;
-	QList<QGraphicsEllipseItem*> handles;
-	QGraphicsEllipseItem* rotateHandle = nullptr;
-	QGraphicsLineItem* centerCrossH = nullptr;
-	QGraphicsLineItem* centerCrossV = nullptr;
-	QGraphicsLineItem* rotateStickLine = nullptr;
-	QGraphicsRectItem* circumRect = nullptr;       // 圆形/椭圆的外接矩形
-
-	struct Rect { double cx = 0, cy = 0, w = 0, h = 0; } rect;
-	struct RotatedRect { double cx = 0, cy = 0, w = 0, h = 0, angle = 0; } rotatedRect;
-	struct Circle { double cx = 0, cy = 0, r = 0; } circle;
-	struct Ellipse { double cx = 0, cy = 0, r1 = 0, r2 = 0, angle = 0; } ellipse;
-	struct Ring { double cx = 0, cy = 0, r1 = 0, r2 = 0; } ring;  // r1, r2 不区分内外，按大小决定
-	struct Arc {
-		double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0;
-		// 同心双圆弧字段
-		bool isBiarc = false;
-		double ax = 0, ay = 0, bx = 0, by = 0;
-		double o1x = 0, o1y = 0, r1 = 0, r2 = 0;
-		double px = 0, py = 0;
-	} arc;
-	struct Polygon { QList<QPointF> pts; } polygon;
-
-	explicit DrawShapeItem(DrawShapeType t) : type(t) {}
-};
-
+class ShapePainter;
+class ShapeHandleHelper;
+struct ShapeHandleSet;
 
 class ImageCanvasView : public QMainWindow
 {
@@ -78,7 +26,7 @@ class ImageCanvasView : public QMainWindow
 
 public:
 	ImageCanvasView(QWidget* parent = nullptr);
-	~ImageCanvasView() override = default;
+	~ImageCanvasView() override;
 
 protected:
 	bool eventFilter(QObject* obj, QEvent* event) override;
@@ -121,13 +69,20 @@ private:
 
 	QLabel* m_infoLabel = nullptr;
 
+	// 分离出的辅助类
+	ShapePainter* m_painter = nullptr;
+	ShapeHandleHelper* m_handleHelper = nullptr;
+
 	QList<DrawShapeItem*> m_shapes;
 	DrawShapeType m_currentShape = Shape_Rect;
-	DrawShapeItem* m_activeShape = nullptr;  // 当前选中/显示的形状（scene 上唯一）
+	DrawShapeItem* m_activeShape = nullptr;  // 当前选中/显示的形状（纯数据）
 	int m_activeShapeIndex = -1;
 
+	// 当前活跃形状的渲染句柄（独立管理）
+	QGraphicsItem* m_shapeItem = nullptr;
+	ShapeHandleSet* m_activeHandleSet = nullptr;
+
 	// 样式
-	QColor m_colorNormal   = QColor(0, 200, 0);
 	QColor m_colorSelected = QColor(0, 120, 255);
 	double m_penWidth = 2.0;
 	bool m_isShapeHovered = false;
@@ -154,12 +109,12 @@ private:
 	// 圆形三点绘制的中间点
 	QPointF m_circlePt1;
 	QPointF m_circlePt2;
-	QGraphicsEllipseItem* m_circleMarker1 = nullptr;  // 点1标记
-	QGraphicsEllipseItem* m_circleMarker2 = nullptr;  // 点2标记
-	QGraphicsEllipseItem* m_ghostEllipse = nullptr;  // 圆形/椭圆的 ghost
-	QGraphicsEllipseItem* m_ghostEllipse2 = nullptr;  // ring 的内圆 ghost
-	QGraphicsPathItem*   m_ghostArcPath = nullptr;    // 双圆弧预览 path
-	QGraphicsRectItem* m_ghostCircumRect = nullptr;   // 外接矩形 ghost
+	QGraphicsEllipseItem* m_circleMarker1 = nullptr;
+	QGraphicsEllipseItem* m_circleMarker2 = nullptr;
+	QGraphicsEllipseItem* m_ghostEllipse = nullptr;
+	QGraphicsEllipseItem* m_ghostEllipse2 = nullptr;
+	QGraphicsPathItem*   m_ghostArcPath = nullptr;
+	QGraphicsRectItem* m_ghostCircumRect = nullptr;
 
 	// Arc 绘制暂存
 	double m_arcStartAngle = 0;
@@ -171,9 +126,8 @@ private:
 	QGraphicsLineItem* m_ghostPolyLine = nullptr;
 
 	// ---- 方法 ----
-	void clearSceneShape();                        // 清除 scene 上当前形状的所有 item
-	void rebuildShapeOnScene(DrawShapeItem* shape); // 根据数据重绘形状到 scene
-	void applyStyle(DrawShapeItem* shape);          // 给 shape->item 上色
+	void clearSceneShape();
+	void rebuildShapeOnScene(DrawShapeItem* shape);
 
 	void showDrawModeOverlay();
 	void hideDrawModeOverlay();
@@ -200,10 +154,6 @@ private:
 	void commitPolygon();
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
-	QGraphicsItem* buildShapeItem(const DrawShapeItem& shape);
-
-	void showHandles(DrawShapeItem* shape);
-	void updateHandlePositions(DrawShapeItem* shape);
 
 	bool isPointInShape(const DrawShapeItem* shape, const QPointF& scenePos) const;
 	QGraphicsEllipseItem* handleAt(const QPointF& scenePos) const;
