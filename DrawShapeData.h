@@ -1,3 +1,13 @@
+/*
+ * 文件名：DrawShapeData.h
+ * 职责：纯几何数据定义，不含任何渲染句柄
+ * 核心功能：
+ *   - 定义 DrawShapeType 枚举（所有形状类型）
+ *   - 定义 DrawShapeItem 结构体（每种形状的几何参数）
+ *   - 供所有模块共享，无依赖
+ * 依赖：无（仅 QList/QPointF）
+ * 注意：纯数据结构，不可引入 QGraphicsItem 等渲染类
+ */
 #pragma once
 
 #include <QList>

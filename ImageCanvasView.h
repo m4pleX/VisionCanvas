@@ -1,3 +1,14 @@
+/*
+ * 文件名：ImageCanvasView.h
+ * 职责：主窗口控制器，协调所有子模块
+ * 核心功能：
+ *   - 图像加载与场景管理
+ *   - 形状绘制流程（7 种形状的交互绘制）
+ *   - 形状编辑（拖拽 handle/旋转/移动）
+ *   - 参数面板、工具栏联动
+ * 依赖：DrawShapeData, ShapePainter, ShapeHandleHelper, ParamPanelWidget, ToolbarController
+ * 注意：作为胶水层，不做具体绘制/控件细节，委托给子模块
+ */
 #pragma once
 
 #include <QtWidgets/QMainWindow>
@@ -21,6 +32,8 @@ class ShapePainter;
 class ShapeHandleHelper;
 struct ShapeHandleSet;
 
+// 主窗口：场景管理、绘制/编辑流程、事件分发
+// 胶水层，委托子模块处理具体逻辑
 class ImageCanvasView : public QMainWindow
 {
 	Q_OBJECT
@@ -52,7 +65,7 @@ private:
 	QGraphicsScene* m_scene = nullptr;
 	QGraphicsPixmapItem* m_pixmapItem = nullptr;
 	QGraphicsRectItem* m_bgItem = nullptr;
-	QGraphicsLineItem* m_spotAbsorber = nullptr;  // OpenGL QPen ��Ӱ������
+	QGraphicsLineItem* m_spotAbsorber = nullptr;  // OpenGL QPen 残影吸收线
 	double m_scaleValue = 1.0;
 
 	bool m_showCenterCross = false;
@@ -67,21 +80,21 @@ private:
 
 	QLabel* m_infoLabel = nullptr;
 
-	// ������ĸ�����
+	// 分离出的辅助类
 	ShapePainter* m_painter = nullptr;
 	ShapeHandleHelper* m_handleHelper = nullptr;
 	ToolbarController* m_toolbar = nullptr;
 
 	QList<DrawShapeItem*> m_shapes;
 	DrawShapeType m_currentShape = Shape_Rect;
-	DrawShapeItem* m_activeShape = nullptr;  // ��ǰѡ��/��ʾ����״�������ݣ�
+	DrawShapeItem* m_activeShape = nullptr;  // 当前选中/显示的形状（纯数据）
 	int m_activeShapeIndex = -1;
 
-	// ��ǰ��Ծ��״����Ⱦ���������������
+	// 当前活跃形状的渲染句柄（独立管理）
 	QGraphicsItem* m_shapeItem = nullptr;
 	ShapeHandleSet* m_activeHandleSet = nullptr;
 
-	// ��ʽ
+	// 样式
 	QColor m_colorSelected = QColor(0, 120, 255);
 	double m_penWidth = 2.0;
 	bool m_isShapeHovered = false;
@@ -105,26 +118,26 @@ private:
 	QPointF m_dragOffset;
 	QPointF m_dragStartCenter;
 
-	// Բ��������Ƶ��м��
+	// 圆形三点绘制的中间点
 	QPointF m_circlePt1;
 	QPointF m_circlePt2;
 	QGraphicsEllipseItem* m_circleMarker1 = nullptr;
 	QGraphicsEllipseItem* m_circleMarker2 = nullptr;
 	QGraphicsEllipseItem* m_ghostEllipse = nullptr;
 	QGraphicsEllipseItem* m_ghostEllipse2 = nullptr;
-	QGraphicsPathItem*   m_ghostArcPath = nullptr;
+	QGraphicsPathItem* m_ghostArcPath = nullptr;
 	QGraphicsRectItem* m_ghostCircumRect = nullptr;
 
-	// Arc �����ݴ�
+	// Arc 绘制暂存
 	double m_arcStartAngle = 0;
 	double m_arcEndAngle = 0;
 
-	// ����λ����ݴ�
+	// 多边形绘制暂存
 	QList<QPointF> m_tempPolyPts;
 	QList<QGraphicsEllipseItem*> m_circleMarkers;
 	QGraphicsLineItem* m_ghostPolyLine = nullptr;
 
-	// ---- ���� ----
+	// ---- 方法 ----
 	void clearSceneShape();
 	void rebuildShapeOnScene(DrawShapeItem* shape);
 
