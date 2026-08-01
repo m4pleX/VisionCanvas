@@ -16,8 +16,8 @@
 class QGraphicsItem;
 class QGraphicsScene;
 
-// 形状绘制器：根据参数构造 QGraphicsItem，统一画笔样式
-// 不持有交互状态，不处理鼠标事件
+/*  形状绘制器：根据参数构造 QGraphicsItem，统一画笔样式 */
+/*  不持有交互状态，不处理鼠标事件 */
 class ShapePainter {
 public:
 	explicit ShapePainter(QGraphicsScene* scene) : m_scene(scene) {}

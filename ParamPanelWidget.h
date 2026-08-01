@@ -6,7 +6,7 @@
  *   - syncValues：拖拽时单向刷新面板数值
  *   - applyValues：确认时从面板读回数据写入 shape
  *   - 多边形 X/Y 并排布局，支持 QScrollArea 滚动
- * 依赖：DrawShapeItem, ParamField
+ * 依赖：DrawShapeItem, ParamField 
  * 注意：不修改场景/形状数据，仅读写参数值
  */
 #pragma once
@@ -28,8 +28,8 @@ struct ParamField {
 	std::function<void(DrawShapeItem&, double)> setter;
 };
 
-// 参数面板：数值编辑、实时预览、参数提交
-// 单向驱动画布更新，不处理鼠标事件
+/*  参数面板：数值编辑、实时预览、参数提交 */
+/*  单向驱动画布更新，不处理鼠标事件 */
 class ParamPanelWidget : public QWidget {
 	Q_OBJECT
 public:

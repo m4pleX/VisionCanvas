@@ -15,8 +15,8 @@
 class QPushButton;
 class QLabel;
 
-// 工具栏状态管理：按钮文字、缩放命令、UI 同步
-// 不处理视图逻辑，只做 UI 层状态联动 
+/*  工具栏状态管理：按钮文字、缩放命令、UI 同步 */
+/*  不处理视图逻辑，只做 UI 层状态联动 */
 class ToolbarController : public QObject {
 	Q_OBJECT
 public:

@@ -38,8 +38,8 @@ struct ShapeHandleSet {
 	QGraphicsRectItem* circumRect = nullptr;
 };
 
-// 控制点管理：创建、拖拽、hover、可见性
-// 与 ShapePainter 配对使用，只负责"操作手柄"
+/*  控制点管理：创建、拖拽、hover、可见性 */
+/*  与 ShapePainter 配对使用，只负责"操作手柄" */
 class ShapeHandleHelper {
 public:
 	explicit ShapeHandleHelper(QGraphicsScene* scene) : m_scene(scene) {}
