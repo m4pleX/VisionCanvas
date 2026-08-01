@@ -46,6 +46,9 @@
     <ClCompile Include="ParamPanelWidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ToolbarController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageCanvasView.h">
@@ -65,5 +68,11 @@
     <ClInclude Include="ShapePainter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <QtMoc Include="ToolbarController.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="ParamPanelWidget.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
 </Project>

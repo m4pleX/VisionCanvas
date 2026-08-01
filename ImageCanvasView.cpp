@@ -52,6 +52,8 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	m_painter = new ShapePainter(m_scene);
 	m_handleHelper = new ShapeHandleHelper(m_scene);
 	m_activeHandleSet = new ShapeHandleSet();
+	m_toolbar = new ToolbarController(ui.tool_btn_toggle_cross, ui.tool_btn_toggle_control_points,
+		ui.tool_btn_toggle_line_width, ui.info_lab_scale_ratio, ui.info_lab_resolution, this);
 	ui.canvas_view_main->setScene(m_scene);
 	ui.canvas_view_main->setViewport(new QOpenGLWidget());
 	ui.canvas_view_main->setMouseTracking(true);
@@ -118,7 +120,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.draw_btn_open_param, &QPushButton::clicked, this, &ImageCanvasView::slotOpenParamPanel);
 
 	ui.info_lab_scale_ratio->setText("100%");
-	ui.info_lab_resolution->setText("(1280, 960)");
+	m_toolbar->updateResolution(1280, 960);
 
 	m_infoLabel = new QLabel(this);
 	m_infoLabel->setStyleSheet("background: white; color: black; padding: 2px 4px; border:1px solid #999;");
@@ -132,6 +134,7 @@ ImageCanvasView::~ImageCanvasView() {
 	delete m_painter;
 	delete m_handleHelper;
 	delete m_activeHandleSet;
+	delete m_toolbar;
 	qDeleteAll(m_shapes);
 	m_shapes.clear();
 }
@@ -339,7 +342,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					// 点击第一个顶点附近且 ≥3 点 → 闭合
 					if (m_tempPolyPts.size() >= 3) {
 						QPointF d = scenePos - m_tempPolyPts.first();
-						if (std::sqrt(d.x()*d.x()+d.y()*d.y()) < 10.0) {
+						if (std::sqrt(d.x()*d.x()+d.y()*d.y()) < 15.0) {
 							commitPolygon(); event->accept(); return true;
 						}
 					}
@@ -945,15 +948,15 @@ void ImageCanvasView::keyPressEvent(QKeyEvent* event)
 void ImageCanvasView::updateScaleUI()
 {
 	m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
-	ui.info_lab_scale_ratio->setText(QString("%1%").arg(qRound(m_scaleValue * 100)));
+	m_toolbar->setScale(m_scaleValue);
 	QTransform t;
 	t.scale(m_scaleValue, m_scaleValue);
 	ui.canvas_view_main->setTransform(t);
 }
 
-void ImageCanvasView::slotZoomIn()   { m_scaleValue += 0.01; updateScaleUI(); }
-void ImageCanvasView::slotZoomOut()  { m_scaleValue -= 0.01; updateScaleUI(); }
-void ImageCanvasView::slotZoomReset(){ m_scaleValue = 1.0; updateScaleUI(); }
+void ImageCanvasView::slotZoomIn()   { m_scaleValue += 0.01; m_toolbar->setScale(m_scaleValue); ui.canvas_view_main->setTransform(QTransform::fromScale(m_scaleValue, m_scaleValue)); }
+void ImageCanvasView::slotZoomOut()  { m_scaleValue -= 0.01; m_toolbar->setScale(m_scaleValue); ui.canvas_view_main->setTransform(QTransform::fromScale(m_scaleValue, m_scaleValue)); }
+void ImageCanvasView::slotZoomReset(){ m_scaleValue = 1.0; m_toolbar->setScale(1.0); ui.canvas_view_main->setTransform(QTransform::fromScale(1.0, 1.0)); }
 
 void ImageCanvasView::slotZoomFit()
 {
@@ -961,10 +964,9 @@ void ImageCanvasView::slotZoomFit()
 	if (pm.isNull()) return;
 	QRectF imageRect = pm.rect();
 	ui.canvas_view_main->fitInView(imageRect, Qt::KeepAspectRatio);
-	QTransform trans = ui.canvas_view_main->transform();
-	m_scaleValue = trans.m11();
+	m_scaleValue = ui.canvas_view_main->transform().m11();
 	m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
-	updateScaleUI();
+	m_toolbar->setScale(m_scaleValue);
 }
 
 void ImageCanvasView::slotToggleCenterCross()
@@ -972,7 +974,7 @@ void ImageCanvasView::slotToggleCenterCross()
 	m_showCenterCross = !m_showCenterCross;
 	m_crossH->setVisible(m_showCenterCross);
 	m_crossV->setVisible(m_showCenterCross);
-	ui.tool_btn_toggle_cross->setText(m_showCenterCross ? QStringLiteral("隐藏十字线") : QStringLiteral("显示十字线"));
+	m_toolbar->updateCrossBtnText(m_showCenterCross);
 	updateCenterCross();
 }
 
@@ -980,7 +982,7 @@ void ImageCanvasView::slotToggleLineWidth()
 {
 	m_thinLine = !m_thinLine;
 	m_penWidth = m_thinLine ? 0.5 : 2.0;
-	ui.tool_btn_toggle_line_width->setText(m_thinLine ? QStringLiteral("切换为粗线") : QStringLiteral("切换为细线"));
+	m_toolbar->updateLineWidthBtnText(m_thinLine);
 	if (m_shapeItem)
 		m_painter->applyStyle(m_shapeItem, m_colorSelected, m_penWidth, m_isShapeHovered);
 }
@@ -988,7 +990,7 @@ void ImageCanvasView::slotToggleLineWidth()
 void ImageCanvasView::slotToggleControlPoints()
 {
 	m_showControlPoints = !m_showControlPoints;
-	ui.tool_btn_toggle_control_points->setText(m_showControlPoints ? QStringLiteral("隐藏控制点") : QStringLiteral("显示控制点"));
+	m_toolbar->updateCtrlPtBtnText(m_showControlPoints);
 	if (m_activeHandleSet)
 		m_handleHelper->setHandlesVisible(*m_activeHandleSet, m_showControlPoints);
 }
@@ -1042,7 +1044,7 @@ void ImageCanvasView::slotLoadImage()
 	// 扩展 sceneRect，在图片外留出充足空间，避免中键拖拽时被限制在图片边界内
 	const qreal pad = 10000.0;
 	m_scene->setSceneRect(pixmap.rect().adjusted(-pad, -pad, pad, pad));
-	ui.info_lab_resolution->setText(QString("(%1, %2)").arg(loadImg.width()).arg(loadImg.height()));
+	m_toolbar->updateResolution(loadImg.width(), loadImg.height());
 	updateCenterCross();
 	slotZoomFit();
 }
@@ -1368,6 +1370,10 @@ void ImageCanvasView::stopDraw()
 	if (m_ghostCircumRect) { m_scene->removeItem(m_ghostCircumRect); delete m_ghostCircumRect; m_ghostCircumRect = nullptr; }
 	if (m_circleMarker1) { m_scene->removeItem(m_circleMarker1); delete m_circleMarker1; m_circleMarker1 = nullptr; }
 	if (m_circleMarker2) { m_scene->removeItem(m_circleMarker2); delete m_circleMarker2; m_circleMarker2 = nullptr; }
+	if (m_ghostPolyLine) { m_scene->removeItem(m_ghostPolyLine); delete m_ghostPolyLine; m_ghostPolyLine = nullptr; }
+	for (auto* mk : m_circleMarkers) { m_scene->removeItem(mk); delete mk; }
+	m_circleMarkers.clear();
+	m_tempPolyPts.clear();
 	m_mode = Mode_None;
 	m_drawStep = 0;
 	hideDrawModeOverlay();

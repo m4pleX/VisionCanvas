@@ -3,6 +3,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_ImageCanvasView.h"
 #include "DrawShapeData.h"
+#include "ToolbarController.h"
 
 class QGraphicsEllipseItem;
 class QGraphicsItem;
@@ -69,6 +70,7 @@ private:
 	// 分离出的辅助类
 	ShapePainter* m_painter = nullptr;
 	ShapeHandleHelper* m_handleHelper = nullptr;
+	ToolbarController* m_toolbar = nullptr;
 
 	QList<DrawShapeItem*> m_shapes;
 	DrawShapeType m_currentShape = Shape_Rect;

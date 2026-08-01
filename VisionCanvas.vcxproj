@@ -99,6 +99,7 @@
     <ClCompile Include="ParamPanelWidget.cpp" />
     <ClCompile Include="ShapeHandleHelper.cpp" />
     <ClCompile Include="ShapePainter.cpp" />
+    <ClCompile Include="ToolbarController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageCanvasView.h" />
@@ -106,6 +107,7 @@
     <QtMoc Include="ParamPanelWidget.h" />
     <ClInclude Include="ShapeHandleHelper.h" />
     <ClInclude Include="ShapePainter.h" />
+    <QtMoc Include="ToolbarController.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
