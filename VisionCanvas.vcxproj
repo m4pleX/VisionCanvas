@@ -104,6 +104,7 @@
   <ItemGroup>
     <QtRcc Include="ImageCanvasView.qrc" />
     <QtUic Include="ImageCanvasView.ui" />
+    <ClCompile Include="AnnotationIO.cpp" />
     <ClCompile Include="ImageCanvasView.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ParamPanelWidget.cpp" />
@@ -113,6 +114,7 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ImageCanvasView.h" />
+    <ClInclude Include="AnnotationIO.h" />
     <ClInclude Include="DrawShapeData.h" />
     <QtMoc Include="ParamPanelWidget.h" />
     <ClInclude Include="ShapeHandleHelper.h" />

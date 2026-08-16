@@ -32,6 +32,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_ImageCanvasView.h"
 #include "DrawShapeData.h"
+#include "AnnotationIO.h"
 #include "ToolbarController.h"
 
 class QGraphicsEllipseItem;
@@ -73,6 +74,8 @@ private slots:
 	void slotToggleLineWidth();
 	void slotToggleControlPoints();
 	void slotLoadImage();
+	void slotSaveAnnotation();
+	void slotLoadAnnotation();
 	void slot_draw_shape_changed(int index);
 	void slotResetShape();
 	void slotOpenParamPanel();
@@ -93,6 +96,7 @@ private:
 	QGraphicsRectItem*    m_bgItem        = nullptr;
 	QGraphicsLineItem*    m_spotAbsorber  = nullptr;  /*  OpenGL 残影吸收线 */
 	double                m_scaleValue    = 1.0;
+	QString               m_imagePath;               /*  当前标注关联的图片路径 */
 
 	bool m_showCenterCross = false;
 	bool m_showControlPoints = true;
@@ -161,7 +165,9 @@ private:
 
 	/*  ====================== 方法 ====================== */
 	void clearSceneShape();
+	void clearAllShapes();
 	void rebuildShapeOnScene(DrawShapeItem* shape);
+	bool loadImageFromPath(const QString& path);
 
 	void showDrawModeOverlay();
 	void hideDrawModeOverlay();

@@ -504,6 +504,62 @@ QPushButton:pressed{
              </layout>
             </item>
             <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <widget class="QPushButton" name="draw_btn_save_anno">
+                <property name="styleSheet">
+                 <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    min-height: 30px;
+    font-size: 14px;
+    color: #1d2939;
+}
+QPushButton:hover{
+    background-color: #eff8ff;
+    border-color: #84b6f4;
+}
+QPushButton:pressed{
+    background-color: #d0e7ff;
+    border-color: #4096ee;
+}
+</string>
+                </property>
+                <property name="text">
+                 <string>保存标注</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="draw_btn_load_anno">
+                <property name="styleSheet">
+                 <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    min-height: 30px;
+    font-size: 14px;
+    color: #1d2939;
+}
+QPushButton:hover{
+    background-color: #eff8ff;
+    border-color: #84b6f4;
+}
+QPushButton:pressed{
+    background-color: #d0e7ff;
+    border-color: #4096ee;
+}
+</string>
+                </property>
+                <property name="text">
+                 <string>加载标注</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
               <item>
                <widget class="QComboBox" name="draw_cbox_shape_type">

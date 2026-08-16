@@ -4,9 +4,14 @@
 #include "ParamPanelWidget.h"
 
 #include <QtAlgorithms>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPainterPath>
 #include <QDoubleSpinBox>
-#include <QFileDialog>
 #include <QOpenGLWidget>
 #include <QScrollArea>
 
@@ -114,6 +119,8 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.tool_btn_toggle_control_points, &QPushButton::clicked, this, &ImageCanvasView::slotToggleControlPoints);
 
 	connect(ui.draw_btn_load_image, &QPushButton::clicked, this, &ImageCanvasView::slotLoadImage);
+	connect(ui.draw_btn_save_anno, &QPushButton::clicked, this, &ImageCanvasView::slotSaveAnnotation);
+	connect(ui.draw_btn_load_anno, &QPushButton::clicked, this, &ImageCanvasView::slotLoadAnnotation);
 	connect(ui.draw_cbox_shape_type, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 			this, &ImageCanvasView::slot_draw_shape_changed);
 	connect(ui.btn_reset_rect, &QPushButton::clicked, this, &ImageCanvasView::slotResetShape);
@@ -1027,17 +1034,10 @@ void ImageCanvasView::updateInfoLabel(const QPointF& scenePos, const QPoint& glo
 	ui.canvas_view_main->viewport()->update();  // 强制 GL 视口重绘，清除叠加标签移动后的边缘残留
 }
 
-void ImageCanvasView::slotLoadImage()
+bool ImageCanvasView::loadImageFromPath(const QString& path)
 {
-	QString filePath = QFileDialog::getOpenFileName(this,
-		QStringLiteral("选择图片"), "", QStringLiteral("图片文件(*.png *.jpg *.bmp *.jpeg)"));
-	if (filePath.isEmpty()) return;
-	QImage loadImg(filePath);
-	if (loadImg.isNull())
-	{
-		QMessageBox::warning(this, QStringLiteral("图片加载失败"), QStringLiteral("无法加载图片"));
-		return;
-	}
+	QImage loadImg(path);
+	if (loadImg.isNull()) return false;
 	QPixmap pixmap = QPixmap::fromImage(loadImg);
 	m_pixmapItem->setPixmap(pixmap);
 	// 扩展 sceneRect，在图片外留出充足空间，避免中键拖拽时被限制在图片边界内
@@ -1046,6 +1046,123 @@ void ImageCanvasView::slotLoadImage()
 	m_toolbar->updateResolution(loadImg.width(), loadImg.height());
 	updateCenterCross();
 	slotZoomFit();
+	return true;
+}
+
+void ImageCanvasView::slotLoadImage()
+{
+	QString filePath = QFileDialog::getOpenFileName(this,
+		QStringLiteral("选择图片"), "", QStringLiteral("图片文件(*.png *.jpg *.bmp *.jpeg)"));
+	if (filePath.isEmpty()) return;
+	if (!loadImageFromPath(filePath))
+	{
+		QMessageBox::warning(this, QStringLiteral("图片加载失败"), QStringLiteral("无法加载图片"));
+		return;
+	}
+	m_imagePath = filePath;
+}
+
+// ===== 标注持久化（JSON） =====
+
+void ImageCanvasView::slotSaveAnnotation()
+{
+	if (m_imagePath.isEmpty())
+	{
+		QMessageBox::warning(this, QStringLiteral("保存标注"), QStringLiteral("请先加载图片"));
+		return;
+	}
+	if (m_shapes.isEmpty())
+	{
+		QMessageBox::information(this, QStringLiteral("保存标注"), QStringLiteral("当前没有可保存的图形"));
+		return;
+	}
+
+	QString defaultPath = QFileInfo(m_imagePath).absolutePath() + "/" +
+		QFileInfo(m_imagePath).completeBaseName() + ".json";
+	QString filePath = QFileDialog::getSaveFileName(this, QStringLiteral("保存标注"),
+		defaultPath, QStringLiteral("标注文件(*.json)"));
+	if (filePath.isEmpty()) return;
+
+	QJsonArray shapeArr;
+	for (const DrawShapeItem* s : m_shapes)
+		shapeArr.append(AnnotationIO::shapeToJson(*s));
+
+	QJsonObject sizeObj;
+	sizeObj["width"] = m_pixmapItem->pixmap().width();
+	sizeObj["height"] = m_pixmapItem->pixmap().height();
+
+	QJsonObject root;
+	root["version"] = 1;
+	root["imagePath"] = m_imagePath;
+	root["imageSize"] = sizeObj;
+	root["shapes"] = shapeArr;
+
+	QFile f(filePath);
+	if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
+	{
+		QMessageBox::warning(this, QStringLiteral("保存标注"), QStringLiteral("无法写入文件：%1").arg(filePath));
+		return;
+	}
+	f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+	f.close();
+	QMessageBox::information(this, QStringLiteral("保存标注"),
+		QStringLiteral("已保存 %1 个图形标注").arg(m_shapes.size()));
+}
+
+void ImageCanvasView::slotLoadAnnotation()
+{
+	QString filePath = QFileDialog::getOpenFileName(this,
+		QStringLiteral("加载标注"), "", QStringLiteral("标注文件(*.json)"));
+	if (filePath.isEmpty()) return;
+
+	QFile f(filePath);
+	if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		QMessageBox::warning(this, QStringLiteral("加载标注"), QStringLiteral("无法打开文件：%1").arg(filePath));
+		return;
+	}
+	QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
+	f.close();
+	if (!doc.isObject())
+	{
+		QMessageBox::warning(this, QStringLiteral("加载标注"), QStringLiteral("标注文件格式无效"));
+		return;
+	}
+	QJsonObject root = doc.object();
+
+	// 关联图片：优先按记录路径加载，缺失时回退到文件同目录
+	QString imagePath = root["imagePath"].toString();
+	if (!imagePath.isEmpty() && !QFileInfo::exists(imagePath))
+	{
+		QString fallback = QFileInfo(filePath).absolutePath() + "/" + QFileInfo(imagePath).fileName();
+		if (QFileInfo::exists(fallback)) imagePath = fallback;
+	}
+	if (imagePath.isEmpty() || !loadImageFromPath(imagePath))
+	{
+		QMessageBox::warning(this, QStringLiteral("加载标注"),
+			QStringLiteral("标注关联的图片不存在或无法加载：%1").arg(imagePath));
+		return;
+	}
+	m_imagePath = imagePath;
+
+	// 重建标注数据
+	clearAllShapes();
+	const QJsonArray shapeArr = root["shapes"].toArray();
+	for (const auto& v : shapeArr)
+	{
+		if (DrawShapeItem* s = AnnotationIO::shapeFromJson(v.toObject()))
+			m_shapes.append(s);
+	}
+
+	// 显示当前下拉框对应的图形（无则显示第一个）
+	int idx = ui.draw_cbox_shape_type->currentIndex();
+	DrawShapeItem* toShow = nullptr;
+	if (idx > 0) toShow = findShapeByType(static_cast<DrawShapeType>(idx - 1));
+	if (!toShow && !m_shapes.isEmpty()) toShow = m_shapes.first();
+	if (toShow) { m_activeShape = toShow; rebuildShapeOnScene(toShow); }
+
+	QMessageBox::information(this, QStringLiteral("加载标注"),
+		QStringLiteral("已加载 %1 个图形标注").arg(m_shapes.size()));
 }
 
 // ===== Combo box 切换 =====
@@ -1114,6 +1231,16 @@ void ImageCanvasView::clearSceneShape()
 {
 	if (m_shapeItem) { m_scene->removeItem(m_shapeItem); delete m_shapeItem; m_shapeItem = nullptr; }
 	if (m_activeHandleSet) m_handleHelper->clearHandles(*m_activeHandleSet);
+}
+
+void ImageCanvasView::clearAllShapes()
+{
+	clearSceneShape();
+	qDeleteAll(m_shapes);
+	m_shapes.clear();
+	m_activeShape = nullptr;
+	m_activeShapeIndex = -1;
+	m_isShapeHovered = false;
 }
 
 void ImageCanvasView::rebuildShapeOnScene(DrawShapeItem* shape)
