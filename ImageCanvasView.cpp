@@ -29,7 +29,7 @@
 
 static inline double normAngle360(double deg) { while(deg<0)deg+=360.0; while(deg>=360.0)deg-=360.0; return deg; }
 
-// ÈıµãÍâ½ÓÔ²£¨ÍâĞÄ + °ë¾¶£©
+// ä¸‰ç‚¹å¤–æ¥åœ†ï¼ˆå¤–å¿ƒ + åŠå¾„ï¼‰
 static bool circumcircle(const QPointF& p1, const QPointF& p2, const QPointF& p3, QPointF& c, double& r) {
 	double x1=p1.x(),y1=p1.y(), x2=p2.x(),y2=p2.y(), x3=p3.x(),y3=p3.y();
 	double d=2.0*(x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2));
@@ -41,7 +41,7 @@ static bool circumcircle(const QPointF& p1, const QPointF& p2, const QPointF& p3
 
 static bool solveConcentricArc(const QPointF& A, const QPointF& B, double r1, double r2, QPointF& O, QPointF& P);
 
-// ===== ¹¹Ôì/Îö¹¹ =====
+// ===== æ„é€ /ææ„ =====
 
 ImageCanvasView::ImageCanvasView(QWidget* parent)
 	: QMainWindow(parent)
@@ -98,9 +98,9 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	defaultPixmap.fill(Qt::white);
 	m_pixmapItem->setPixmap(defaultPixmap);
 
-	// OpenGL QPen ²ĞÓ°ÎüÊÕÏß£¨z=999£¬0.01pxÍ¸Ã÷£¬ÖÕÉí×¤Áô£©
-	m_spotAbsorber = m_scene->addLine(0, 0, 0, 0.01, QPen(QColor(0,0,0,1), 1));
-	m_spotAbsorber->setZValue(999);
+	// OpenGL QPen æ®‹å½±å¸æ”¶çº¿ï¼ˆz=999ï¼Œ0.01pxé€æ˜ï¼Œç»ˆèº«é©»ç•™ï¼‰
+	//m_spotAbsorber = m_scene->addLine(0, 0, 0, 0.01, QPen(QColor(0,0,0,1), 1));
+	//m_spotAbsorber->setZValue(999);
 
 	ui.canvas_view_main->viewport()->installEventFilter(this);
 	ui.canvas_view_main->viewport()->setMouseTracking(true);
@@ -126,7 +126,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	m_infoLabel->setStyleSheet("background: white; color: black; padding: 2px 4px; border:1px solid #999;");
 	m_infoLabel->setVisible(false);
 
-	// ÑÓ³ÙÖ´ĞĞ fit£¬È·±£´°¿Ú²¼¾ÖÍê³É¡¢viewport ³ß´çÒÑÈ·¶¨
+	// å»¶è¿Ÿæ‰§è¡Œ fitï¼Œç¡®ä¿çª—å£å¸ƒå±€å®Œæˆã€viewport å°ºå¯¸å·²ç¡®å®š
 	QTimer::singleShot(0, this, [this]() { slotZoomFit(); });
 }
 
@@ -139,7 +139,7 @@ ImageCanvasView::~ImageCanvasView() {
 	m_shapes.clear();
 }
 
-// ===== ÊÂ¼ş´¦Àí =====
+// ===== äº‹ä»¶å¤„ç† =====
 
 bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 {
@@ -168,16 +168,16 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		{
 			QWheelEvent* wheel = static_cast<QWheelEvent*>(event);
 			if (!(wheel->modifiers() & Qt::ControlModifier)) { event->accept(); return true; }
-			QPointF oldPos = ui.canvas_view_main->mapToScene(wheel->pos());
-			m_scaleValue *= (wheel->delta() > 0 ? 1.1 : 0.9);
+			QPointF oldPos = ui.canvas_view_main->mapToScene(wheel->position().toPoint());
+			m_scaleValue *= (wheel->angleDelta().y() > 0 ? 1.1 : 0.9);
 			m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
 
 			QTransform trans;
 			trans.scale(m_scaleValue, m_scaleValue);
 			ui.canvas_view_main->setTransform(trans);
 
-			QPointF newPos = ui.canvas_view_main->mapToScene(wheel->pos());
-			QPointF delta = oldPos - newPos;  // ²¹³¥Ëõ·ÅÔ­µãÆ«ÒÆ
+			QPointF newPos = ui.canvas_view_main->mapToScene(wheel->position().toPoint());
+			QPointF delta = oldPos - newPos;  // è¡¥å¿ç¼©æ”¾åŸç‚¹åç§»
 			ui.canvas_view_main->horizontalScrollBar()->setValue(
 				ui.canvas_view_main->horizontalScrollBar()->value() + qRound(delta.x()));
 			ui.canvas_view_main->verticalScrollBar()->setValue(
@@ -206,31 +206,32 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
-			updateInfoLabel(scenePos, me->globalPos());
+			updateInfoLabel(scenePos, me->globalPosition().toPoint());
 		}
 		else if (event->type() == QEvent::Leave)
 		{
 			m_infoLabel->setVisible(false);
+			ui.canvas_view_main->viewport()->update();  // å¼ºåˆ¶ GL è§†å£é‡ç»˜ï¼Œæ¸…é™¤å åŠ æ ‡ç­¾éšè—åçš„è¾¹ç¼˜æ®‹ç•™
 		}
 
-		// ===== »æÖÆÄ£Ê½ =====
+		// ===== ç»˜åˆ¶æ¨¡å¼ =====
 		if (m_mode == Mode_Draw)
 		{
-		// µÚÒ»²½°´ÏÂÊ±£¬ÎüÊÕÏßÒÆµ½µã»÷Î»ÖÃÎüÊÕ²ĞÓ°
-		if (event->type() == QEvent::MouseButtonPress && m_drawStep == 0)
-		{
-			QMouseEvent* me = static_cast<QMouseEvent*>(event);
-			if (me->button() == Qt::LeftButton && m_spotAbsorber)
-			{
-				m_spotAbsorber->setLine(scenePos.x(), scenePos.y(), scenePos.x(), scenePos.y()+0.01);
-				ui.canvas_view_main->viewport()->repaint();
-			}
-		}
-		// ===== ËÄµãÍ¬ĞÄË«Ô²»¡ =====
-		// µã1=ÆğµãA, µã2=ÖÕµãB, µã3=Ëør1, µã4=Ëør2
+		// ç¬¬ä¸€æ­¥æŒ‰ä¸‹æ—¶ï¼Œå¸æ”¶çº¿ç§»åˆ°ç‚¹å‡»ä½ç½®å¸æ”¶æ®‹å½±
+		//if (event->type() == QEvent::MouseButtonPress && m_drawStep == 0)
+		//{
+		//	QMouseEvent* me = static_cast<QMouseEvent*>(event);
+		//	if (me->button() == Qt::LeftButton && m_spotAbsorber)
+		//	{
+		//		m_spotAbsorber->setLine(scenePos.x(), scenePos.y(), scenePos.x(), scenePos.y()+0.01);
+		//		ui.canvas_view_main->viewport()->repaint();
+		//	}
+		//}
+		// ===== å››ç‚¹æ‰‡ç¯ =====
+		// ç‚¹1=èµ·ç‚¹A, ç‚¹2=ç»ˆç‚¹B, ç‚¹3=é”r1, ç‚¹4=é”r2
 		if (m_currentShape == Shape_Arc)
 		{
-			// ÖĞ¼ü°´ÏÂ ¡ú »­²¼Æ½ÒÆ
+			// ä¸­é”®æŒ‰ä¸‹ â†’ ç”»å¸ƒå¹³ç§»
 		if (event->type() == QEvent::MouseButtonPress)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -260,7 +261,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						m_circleMarker2 = new QGraphicsEllipseItem(m_circlePt2.x()-mrkR,m_circlePt2.y()-mrkR,mrkR*2,mrkR*2);
 						m_circleMarker2->setPen(Qt::NoPen);m_circleMarker2->setBrush(QColor(255,80,80));m_circleMarker2->setZValue(100);m_scene->addItem(m_circleMarker2);
 					}else if(m_drawStep == 2){
-						// µÚÈıµãËør1
+						// ç¬¬ä¸‰ç‚¹é”r1
 						QPointF A(m_circlePt1),B(m_circlePt2),C(scenePos),O;double r1;
 						if(circumcircle(A,B,C,O,r1)&&r1>1.5){
 							double aA=normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
@@ -318,10 +319,10 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			return false;
 		}
 
-		// ===== ¶à±ßĞÎ =====
+		// ===== å¤šè¾¹å½¢ =====
 		if (m_currentShape == Shape_Polygon)
 		{
-			// ÖĞ¼ü°´ÏÂ ¡ú »­²¼Æ½ÒÆ
+			// ä¸­é”®æŒ‰ä¸‹ â†’ ç”»å¸ƒå¹³ç§»
 		if (event->type() == QEvent::MouseButtonPress)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -339,7 +340,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			{
 				QMouseEvent* me = static_cast<QMouseEvent*>(event);
 				if (me->button() == Qt::LeftButton) {
-					// µã»÷µÚÒ»¸ö¶¥µã¸½½üÇÒ ¡İ3 µã ¡ú ±ÕºÏ
+					// ç‚¹å‡»ç¬¬ä¸€ä¸ªé¡¶ç‚¹é™„è¿‘ä¸” â‰¥3 ç‚¹ â†’ é—­åˆ
 					if (m_tempPolyPts.size() >= 3) {
 						QPointF d = scenePos - m_tempPolyPts.first();
 						if (std::sqrt(d.x()*d.x()+d.y()*d.y()) < 15.0) {
@@ -356,14 +357,14 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			}
 			else if (event->type() == QEvent::MouseMove && m_drawStep == 1 && m_tempPolyPts.size() >= 1)
 			{
-				// ÒÑ»æ±ßÔ¤ÀÀ
+				// å·²ç»˜è¾¹é¢„è§ˆ
 				if (!m_ghostArcPath) { m_ghostArcPath=new QGraphicsPathItem(); QPen pen(QColor(0,180,255),m_penWidth,Qt::DashLine); pen.setCosmetic(true); m_ghostArcPath->setPen(pen); m_ghostArcPath->setZValue(99); m_scene->addItem(m_ghostArcPath); }
 				QPainterPath edges; edges.moveTo(m_tempPolyPts.first());
 				for(int i=1;i<m_tempPolyPts.size();++i) edges.lineTo(m_tempPolyPts[i]);
 				edges.lineTo(scenePos);
 				m_ghostArcPath->setPath(edges);
 
-				// ¿¿½üÆğµãÊ±¸ßÁÁ±ÕºÏÏß
+				// é è¿‘èµ·ç‚¹æ—¶é«˜äº®é—­åˆçº¿
 				QPointF d = scenePos - m_tempPolyPts.first();
 				double dist = std::sqrt(d.x()*d.x()+d.y()*d.y());
 				if (m_ghostPolyLine) { m_ghostPolyLine->setVisible(dist < 15.0 && m_tempPolyPts.size()>=3); }
@@ -381,12 +382,12 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 
 		if (m_currentShape == Shape_Circle || m_currentShape == Shape_Ring)
 		{
-			// Ô²»·£ºËÄµã¹¹Ôì£¬Ç°ÈıµãÈ·¶¨Ô²£¨Í¬Ô²ĞÎ£©£¬µÚËÄµã¾ö¶¨ÁíÒ»¸öÔ²µÄ°ë¾¶
-			// step0¡ústep1: µã1
-			// step1¡ústep2: µã1+µã2+Êó±ê=Èı½ÇĞÎÍâĞÄ»­ghostÔ²
-			// step2¡ústep3: È·¶¨µÚÒ»¸öÔ²£¬µÚËÄµã¾ö¶¨µÚ¶ş¸ö°ë¾¶
-			// step3¡úÈ·ÈÏ: Ìá½»
-			// ÖĞ¼ü°´ÏÂ ¡ú »­²¼Æ½ÒÆ
+			// åœ†ç¯ï¼šå››ç‚¹æ„é€ ï¼Œå‰ä¸‰ç‚¹ç¡®å®šåœ†ï¼ˆåŒåœ†å½¢ï¼‰ï¼Œç¬¬å››ç‚¹å†³å®šå¦ä¸€ä¸ªåœ†çš„åŠå¾„
+			// step0â†’step1: ç‚¹1
+			// step1â†’step2: ç‚¹1+ç‚¹2+é¼ æ ‡=ä¸‰è§’å½¢å¤–å¿ƒç”»ghoståœ†
+			// step2â†’step3: ç¡®å®šç¬¬ä¸€ä¸ªåœ†ï¼Œç¬¬å››ç‚¹å†³å®šç¬¬äºŒä¸ªåŠå¾„
+			// step3â†’ç¡®è®¤: æäº¤
+			// ä¸­é”®æŒ‰ä¸‹ â†’ ç”»å¸ƒå¹³ç§»
 		if (event->type() == QEvent::MouseButtonPress)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -431,8 +432,8 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					}
 					else if (m_drawStep == 2)
 					{
-						// µÚÈı²½£ºÈıµãÍâĞÄÈ·¶¨Ô²
-						// ÏÈ¼ÆËã²¢¹Ì¶¨µÚÒ»¸öÔ²µÄ°ë¾¶ºÍÖĞĞÄ
+						// ç¬¬ä¸‰æ­¥ï¼šä¸‰ç‚¹å¤–å¿ƒç¡®å®šåœ†
+						// å…ˆè®¡ç®—å¹¶å›ºå®šç¬¬ä¸€ä¸ªåœ†çš„åŠå¾„å’Œä¸­å¿ƒ
 						double x1=m_circlePt1.x(), y1=m_circlePt1.y();
 						double x2=m_circlePt2.x(), y2=m_circlePt2.y();
 						double x3=scenePos.x(),   y3=scenePos.y();
@@ -453,15 +454,15 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 							m_drawStep = 0;
 							ui.canvas_view_main->setCursor(Qt::ArrowCursor);
 						}
-						else // Shape_Ring: ½øÈëµÚËÄ²½
+						else // Shape_Ring: è¿›å…¥ç¬¬å››æ­¥
 						{
-							// ±£´æµÚÒ»¸öÔ²µÄÖĞĞÄºÍ°ë¾¶
+							// ä¿å­˜ç¬¬ä¸€ä¸ªåœ†çš„ä¸­å¿ƒå’ŒåŠå¾„
 							m_anchorPoint = QPointF(ux, uy);
 							m_dragStartRect.cx = ux;
 							m_dragStartRect.cy = uy;
-							m_dragStartRect.w = r * 2;  // ´æµÚÒ»¸ö°ë¾¶ÔÚ w Àï
+							m_dragStartRect.w = r * 2;  // å­˜ç¬¬ä¸€ä¸ªåŠå¾„åœ¨ w é‡Œ
 							m_drawStep = 3;
-							// ¸üĞÂ ghost ellipse ÎªÒÑ¹Ì¶¨µÄÔ²£¨ÊµÏßÔ¤ÀÀ£©
+							// æ›´æ–° ghost ellipse ä¸ºå·²å›ºå®šçš„åœ†ï¼ˆå®çº¿é¢„è§ˆï¼‰
 							if (m_ghostEllipse)
 							{
 								m_ghostEllipse->setRect(ux-r, uy-r, r*2, r*2);
@@ -469,7 +470,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 								solidPen.setCosmetic(true);
 								m_ghostEllipse->setPen(solidPen);
 							}
-							// ´´½¨µÚ¶ş¸ö ghost ellipse£¨ÄÚÔ²Ô¤ÀÀ£©
+							// åˆ›å»ºç¬¬äºŒä¸ª ghost ellipseï¼ˆå†…åœ†é¢„è§ˆï¼‰
 							if (!m_ghostEllipse2)
 							{
 								m_ghostEllipse2 = new QGraphicsEllipseItem();
@@ -484,7 +485,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					}
 					else if (m_drawStep == 3 && m_currentShape == Shape_Ring)
 					{
-						// µÚËÄ²½£ºÈ·¶¨µÚ¶ş¸öÔ²µÄ°ë¾¶£¬Ìá½»Ô²»·
+						// ç¬¬å››æ­¥ï¼šç¡®å®šç¬¬äºŒä¸ªåœ†çš„åŠå¾„ï¼Œæäº¤åœ†ç¯
 						commitRing();
 						if (m_ghostEllipse) { m_scene->removeItem(m_ghostEllipse); delete m_ghostEllipse; m_ghostEllipse = nullptr; }
 						if (m_ghostEllipse2) { m_scene->removeItem(m_ghostEllipse2); delete m_ghostEllipse2; m_ghostEllipse2 = nullptr; }
@@ -507,7 +508,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			}
 			else if (event->type() == QEvent::MouseMove && m_drawStep >= 1 && m_drawStep <= 3)
 			{
-				// È·±£ ghost ellipse ´æÔÚ
+				// ç¡®ä¿ ghost ellipse å­˜åœ¨
 				if (!m_ghostEllipse)
 				{
 					m_ghostEllipse = new QGraphicsEllipseItem();
@@ -521,7 +522,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 
 				if (m_drawStep == 1)
 				{
-					// Á½µãÄ£Ê½£ºÒÔµã1µ½Êó±êÎªÖ±¾¶µÄÔ²
+					// ä¸¤ç‚¹æ¨¡å¼ï¼šä»¥ç‚¹1åˆ°é¼ æ ‡ä¸ºç›´å¾„çš„åœ†
 					double d1x = m_circlePt1.x(), d1y = m_circlePt1.y();
 					double mx  = scenePos.x(), my = scenePos.y();
 					double cx = (d1x + mx) / 2.0;
@@ -531,7 +532,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				}
 				else if (m_drawStep == 2)
 				{
-					// ÈıµãÄ£Ê½£ºÈı½ÇĞÎÍâĞÄ
+					// ä¸‰ç‚¹æ¨¡å¼ï¼šä¸‰è§’å½¢å¤–å¿ƒ
 					double x1=m_circlePt1.x(), y1=m_circlePt1.y();
 					double x2=m_circlePt2.x(), y2=m_circlePt2.y();
 					double x3=scenePos.x(),   y3=scenePos.y();
@@ -544,7 +545,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				}
 				else if (m_drawStep == 3 && m_currentShape == Shape_Ring)
 				{
-					// µÚËÄ²½Ô¤ÀÀµÚ¶ş¸öÔ²£ºÖĞĞÄÒÑ¶¨£¬Êó±ê¾àÖĞĞÄµÄ¾àÀë¾ÍÊÇµÚ¶ş¸ö°ë¾¶
+					// ç¬¬å››æ­¥é¢„è§ˆç¬¬äºŒä¸ªåœ†ï¼šä¸­å¿ƒå·²å®šï¼Œé¼ æ ‡è·ä¸­å¿ƒçš„è·ç¦»å°±æ˜¯ç¬¬äºŒä¸ªåŠå¾„
 					double cx = m_anchorPoint.x(), cy = m_anchorPoint.y();
 					double r2 = std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx) + (scenePos.y()-cy)*(scenePos.y()-cy));
 					if (m_ghostEllipse2)
@@ -556,8 +557,8 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			return false;
 		}
 
-			// Í¨ÓÃÁ½²½»æÖÆ£¨¾ØĞÎ¡¢Ğı×ª¾ØĞÎ¡¢ÍÖÔ²µÈ£©
-			// ÖĞ¼ü°´ÏÂ ¡ú »­²¼Æ½ÒÆ
+			// é€šç”¨ä¸¤æ­¥ç»˜åˆ¶ï¼ˆçŸ©å½¢ã€æ—‹è½¬çŸ©å½¢ã€æ¤­åœ†ç­‰ï¼‰
+			// ä¸­é”®æŒ‰ä¸‹ â†’ ç”»å¸ƒå¹³ç§»
 		if (event->type() == QEvent::MouseButtonPress)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -588,7 +589,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						m_ghostRect->setZValue(99);
 						m_ghostRect->setRect(QRectF(m_anchorPoint, QSizeF(0, 0)));
 						m_scene->addItem(m_ghostRect);
-						// ÍÖÔ²µÄ ghost ellipse
+						// æ¤­åœ†çš„ ghost ellipse
 						if (m_currentShape == Shape_Ellipse)
 						{
 							m_ghostEllipse = new QGraphicsEllipseItem();
@@ -635,9 +636,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			return false;
 		}
 
-		// ===== ·Ç»æÖÆÄ£Ê½ =====
+		// ===== éç»˜åˆ¶æ¨¡å¼ =====
 
-		// MouseButtonRelease£¨Í£Ö¹ÍÏ×§£©
+		// MouseButtonReleaseï¼ˆåœæ­¢æ‹–æ‹½ï¼‰
 		if (event->type() == QEvent::MouseButtonRelease)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -684,7 +685,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			}
 		}
 
-		// Ğı×ªÍÏ×§ÖĞ
+		// æ—‹è½¬æ‹–æ‹½ä¸­
 		if (m_isRotating && event->type() == QEvent::MouseMove)
 		{
 			if (m_dragShape && m_dragShape->type == Shape_Ellipse)
@@ -696,7 +697,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			event->accept();
 			return true;
 		}
-		// Handle ÍÏ×§ÖĞ
+		// Handle æ‹–æ‹½ä¸­
 			if (m_isDraggingHandle && event->type() == QEvent::MouseMove)
 			{
 				if (m_dragShape && m_dragShape->type == Shape_RotateRect)
@@ -716,7 +717,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				event->accept();
 				return true;
 			}
-		// ĞÎ×´ÍÏ¶¯ÖĞ
+		// å½¢çŠ¶æ‹–åŠ¨ä¸­
 		if (m_isDraggingShape && event->type() == QEvent::MouseMove)
 		{
 			if (m_activeShape)
@@ -769,7 +770,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			return true;
 		}
 
-		// ÖĞ¼ü°´ÏÂ ¡ú »­²¼Æ½ÒÆ
+		// ä¸­é”®æŒ‰ä¸‹ â†’ ç”»å¸ƒå¹³ç§»
 		if (event->type() == QEvent::MouseButtonPress)
 		{
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
@@ -788,13 +789,13 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			QMouseEvent* me = static_cast<QMouseEvent*>(event);
 			if (me->button() == Qt::LeftButton && m_activeShape)
 			{
-				// ÓÅÏÈ¼ì²â handle
+				// ä¼˜å…ˆæ£€æµ‹ handle
 				QGraphicsEllipseItem* hitHandle = handleAt(scenePos);
 				if (hitHandle)
 				{
 					int hIdx = hitHandle->data(0).toInt();
 					int role = hitHandle->data(1).toInt();
-					if (role == 1) // Ğı×ª¿ØÖÆµã
+					if (role == 1) // æ—‹è½¬æ§åˆ¶ç‚¹
 					{
 						m_isRotating = true;
 						m_dragShape = m_activeShape;
@@ -846,7 +847,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					}
 				}
 
-				// ¼ì²âĞÎ×´ÄÚ²¿ÍÏ¶¯
+				// æ£€æµ‹å½¢çŠ¶å†…éƒ¨æ‹–åŠ¨
 			if (isPointInShape(m_activeShape, scenePos))
 			{
 			m_isDraggingShape = true;
@@ -899,7 +900,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				}
 				else
 				{
-					// ĞÎ×´±¾ÌåĞüÍ£¼Ó´Ö
+					// å½¢çŠ¶æœ¬ä½“æ‚¬åœåŠ ç²—
 					bool nowHovered = m_activeShape && isPointInShape(m_activeShape, scenePos);
 					if (nowHovered != m_isShapeHovered) {
 						applyShapeHover(nowHovered);
@@ -914,7 +915,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 	return QMainWindow::eventFilter(obj, event);
 }
 
-// ===== ¼üÅÌ =====
+// ===== é”®ç›˜ =====
 
 void ImageCanvasView::keyPressEvent(QKeyEvent* event)
 {
@@ -940,7 +941,7 @@ void ImageCanvasView::keyPressEvent(QKeyEvent* event)
 	QMainWindow::keyPressEvent(event);
 }
 
-// ===== Ëõ·Å =====
+// ===== ç¼©æ”¾ =====
 
 void ImageCanvasView::updateScaleUI()
 {
@@ -1023,22 +1024,23 @@ void ImageCanvasView::updateInfoLabel(const QPointF& scenePos, const QPoint& glo
 	m_infoLabel->adjustSize();
 	m_infoLabel->move(mapFromGlobal(globalPos) + QPoint(20, 5));
 	m_infoLabel->setVisible(true);
+	ui.canvas_view_main->viewport()->update();  // å¼ºåˆ¶ GL è§†å£é‡ç»˜ï¼Œæ¸…é™¤å åŠ æ ‡ç­¾ç§»åŠ¨åçš„è¾¹ç¼˜æ®‹ç•™
 }
 
 void ImageCanvasView::slotLoadImage()
 {
 	QString filePath = QFileDialog::getOpenFileName(this,
-		QStringLiteral("Ñ¡ÔñÍ¼Æ¬"), "", QStringLiteral("Í¼Æ¬ÎÄ¼ş(*.png *.jpg *.bmp *.jpeg)"));
+		QStringLiteral("é€‰æ‹©å›¾ç‰‡"), "", QStringLiteral("å›¾ç‰‡æ–‡ä»¶(*.png *.jpg *.bmp *.jpeg)"));
 	if (filePath.isEmpty()) return;
 	QImage loadImg(filePath);
 	if (loadImg.isNull())
 	{
-		QMessageBox::warning(this, QStringLiteral("Í¼Æ¬¼ÓÔØÊ§°Ü"), QStringLiteral("ÎŞ·¨¼ÓÔØÍ¼Æ¬"));
+		QMessageBox::warning(this, QStringLiteral("å›¾ç‰‡åŠ è½½å¤±è´¥"), QStringLiteral("æ— æ³•åŠ è½½å›¾ç‰‡"));
 		return;
 	}
 	QPixmap pixmap = QPixmap::fromImage(loadImg);
 	m_pixmapItem->setPixmap(pixmap);
-	// À©Õ¹ sceneRect£¬ÔÚÍ¼Æ¬ÍâÁô³ö³ä×ã¿Õ¼ä£¬±ÜÃâÖĞ¼üÍÏ×§Ê±±»ÏŞÖÆÔÚÍ¼Æ¬±ß½çÄÚ
+	// æ‰©å±• sceneRectï¼Œåœ¨å›¾ç‰‡å¤–ç•™å‡ºå……è¶³ç©ºé—´ï¼Œé¿å…ä¸­é”®æ‹–æ‹½æ—¶è¢«é™åˆ¶åœ¨å›¾ç‰‡è¾¹ç•Œå†…
 	const qreal pad = 10000.0;
 	m_scene->setSceneRect(pixmap.rect().adjusted(-pad, -pad, pad, pad));
 	m_toolbar->updateResolution(loadImg.width(), loadImg.height());
@@ -1046,7 +1048,7 @@ void ImageCanvasView::slotLoadImage()
 	slotZoomFit();
 }
 
-// ===== Combo box ÇĞ»» =====
+// ===== Combo box åˆ‡æ¢ =====
 
 void ImageCanvasView::slot_draw_shape_changed(int index)
 {
@@ -1066,7 +1068,7 @@ void ImageCanvasView::slot_draw_shape_changed(int index)
 	m_currentShape = type;
 	m_activeShapeIndex = index;
 
-	// ÏÈÇåµô scene ÉÏ¾ÉµÄ
+	// å…ˆæ¸…æ‰ scene ä¸Šæ—§çš„
 	clearSceneShape();
 	m_isShapeHovered = false;
 	m_activeShape = nullptr;
@@ -1074,14 +1076,14 @@ void ImageCanvasView::slot_draw_shape_changed(int index)
 	DrawShapeItem* existing = findShapeByType(type);
 	if (existing)
 	{
-		// ÒÑÓĞÊı¾İ ¡ú ÖØ»æ
+		// å·²æœ‰æ•°æ® â†’ é‡ç»˜
 		m_activeShape = existing;
 		rebuildShapeOnScene(existing);
 		ui.canvas_view_main->setCursor(Qt::ArrowCursor);
 	}
 	else
 	{
-		// ÎŞÊı¾İ ¡ú ½øÈë»æÖÆÄ£Ê½
+		// æ— æ•°æ® â†’ è¿›å…¥ç»˜åˆ¶æ¨¡å¼
 		startDraw(type);
 	}
 }
@@ -1095,18 +1097,18 @@ void ImageCanvasView::slotResetShape()
 	DrawShapeItem* shape = findShapeByType(type);
 	if (!shape) return;
 
-	// Çå³ı scene + ´ÓÁĞ±íÉ¾³ı
+	// æ¸…é™¤ scene + ä»åˆ—è¡¨åˆ é™¤
 	clearSceneShape();
 	m_shapes.removeOne(shape);
 	m_isShapeHovered = false;
 	m_activeShape = nullptr;
 	delete shape;
 
-	// ½øÈë»æÖÆÄ£Ê½
+	// è¿›å…¥ç»˜åˆ¶æ¨¡å¼
 	startDraw(type);
 }
 
-// ===== Scene ÇåÀí & ÖØ»æ =====
+// ===== Scene æ¸…ç† & é‡ç»˜ =====
 
 void ImageCanvasView::clearSceneShape()
 {
@@ -1125,10 +1127,10 @@ void ImageCanvasView::rebuildShapeOnScene(DrawShapeItem* shape)
 		m_handleHelper->setHandlesVisible(*m_activeHandleSet, false);
 }
 
-// ===== ÑùÊ½ =====
-// applyStyle ÒÑÇ¨Èë ShapePainter::applyStyle£¬Í¨¹ı m_painter µ÷ÓÃ
+// ===== æ ·å¼ =====
+// applyStyle å·²è¿å…¥ ShapePainter::applyStyleï¼Œé€šè¿‡ m_painter è°ƒç”¨
 
-// ===== »æÖÆÄ£Ê½¸¡²ã =====
+// ===== ç»˜åˆ¶æ¨¡å¼æµ®å±‚ =====
 
 void ImageCanvasView::showDrawModeOverlay()
 {
@@ -1144,11 +1146,11 @@ void ImageCanvasView::showDrawModeOverlay()
 		QVBoxLayout* outerLayout = new QVBoxLayout(m_drawModeOverlay);
 		outerLayout->setAlignment(Qt::AlignCenter);
 
-		QLabel* hintLabel = new QLabel(QStringLiteral("»æÖÆÄ£Ê½ÖĞ"), m_drawModeOverlay);
+		QLabel* hintLabel = new QLabel(QStringLiteral("ç»˜åˆ¶æ¨¡å¼ä¸­"), m_drawModeOverlay);
 		hintLabel->setStyleSheet("color: white; font-size: 14px; font-weight: bold; background: transparent; border: none;");
 		hintLabel->setAlignment(Qt::AlignCenter);
 
-		m_btnCancelDraw = new QPushButton(QStringLiteral("È¡Ïû»æÖÆ"), m_drawModeOverlay);
+		m_btnCancelDraw = new QPushButton(QStringLiteral("å–æ¶ˆç»˜åˆ¶"), m_drawModeOverlay);
 		m_btnCancelDraw->setFixedSize(100, 32);
 		m_btnCancelDraw->setStyleSheet(
 			"QPushButton { background-color: #e74c3c; color: white; border: none; border-radius: 4px; font-size: 13px; }"
@@ -1181,58 +1183,58 @@ void ImageCanvasView::hideDrawModeOverlay()
 	if (m_drawModeOverlay) m_drawModeOverlay->hide();
 }
 
-// ===== ²ÎÊıÃæ°å =====
+// ===== å‚æ•°é¢æ¿ =====
 
 QList<ParamField> ImageCanvasView::buildParamFields(DrawShapeType type) const {
 	QList<ParamField> fields;
 	switch (type) {
 	case Shape_Rect:
 		fields = {
-			{QStringLiteral("ÖĞĞÄ X"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cx;}, [](DrawShapeItem& s,double v){s.rect.cx=v;}},
-			{QStringLiteral("ÖĞĞÄ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cy;}, [](DrawShapeItem& s,double v){s.rect.cy=v;}},
-			{QStringLiteral("¿í¶È"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.w;},  [](DrawShapeItem& s,double v){s.rect.w=v;}},
-			{QStringLiteral("¸ß¶È"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.h;},  [](DrawShapeItem& s,double v){s.rect.h=v;}},
+			{QStringLiteral("ä¸­å¿ƒ X"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cx;}, [](DrawShapeItem& s,double v){s.rect.cx=v;}},
+			{QStringLiteral("ä¸­å¿ƒ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cy;}, [](DrawShapeItem& s,double v){s.rect.cy=v;}},
+			{QStringLiteral("å®½åº¦"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.w;},  [](DrawShapeItem& s,double v){s.rect.w=v;}},
+			{QStringLiteral("é«˜åº¦"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.h;},  [](DrawShapeItem& s,double v){s.rect.h=v;}},
 		}; break;
 	case Shape_RotateRect:
 		fields = {
-			{QStringLiteral("ÖĞĞÄ X"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cx;}, [](DrawShapeItem& s,double v){s.rotatedRect.cx=v;}},
-			{QStringLiteral("ÖĞĞÄ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cy;}, [](DrawShapeItem& s,double v){s.rotatedRect.cy=v;}},
-			{QStringLiteral("¿í¶È"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.w;},  [](DrawShapeItem& s,double v){s.rotatedRect.w=v;}},
-			{QStringLiteral("¸ß¶È"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.h;},  [](DrawShapeItem& s,double v){s.rotatedRect.h=v;}},
-			{QStringLiteral("½Ç¶È"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.angle;}, [](DrawShapeItem& s,double v){s.rotatedRect.angle=v;}},
+			{QStringLiteral("ä¸­å¿ƒ X"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cx;}, [](DrawShapeItem& s,double v){s.rotatedRect.cx=v;}},
+			{QStringLiteral("ä¸­å¿ƒ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cy;}, [](DrawShapeItem& s,double v){s.rotatedRect.cy=v;}},
+			{QStringLiteral("å®½åº¦"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.w;},  [](DrawShapeItem& s,double v){s.rotatedRect.w=v;}},
+			{QStringLiteral("é«˜åº¦"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.h;},  [](DrawShapeItem& s,double v){s.rotatedRect.h=v;}},
+			{QStringLiteral("è§’åº¦"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.angle;}, [](DrawShapeItem& s,double v){s.rotatedRect.angle=v;}},
 		}; break;
 	case Shape_Circle:
 		fields = {
-			{QStringLiteral("ÖĞĞÄ X"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cx;}, [](DrawShapeItem& s,double v){s.circle.cx=v;}},
-			{QStringLiteral("ÖĞĞÄ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cy;}, [](DrawShapeItem& s,double v){s.circle.cy=v;}},
-			{QStringLiteral("°ë¾¶"),   -999999, 999999, [](const DrawShapeItem& s){return s.circle.r;},  [](DrawShapeItem& s,double v){s.circle.r=v;}},
+			{QStringLiteral("ä¸­å¿ƒ X"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cx;}, [](DrawShapeItem& s,double v){s.circle.cx=v;}},
+			{QStringLiteral("ä¸­å¿ƒ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cy;}, [](DrawShapeItem& s,double v){s.circle.cy=v;}},
+			{QStringLiteral("åŠå¾„"),   -999999, 999999, [](const DrawShapeItem& s){return s.circle.r;},  [](DrawShapeItem& s,double v){s.circle.r=v;}},
 		}; break;
 	case Shape_Ellipse:
 		fields = {
-			{QStringLiteral("ÖĞĞÄ X"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cx;}, [](DrawShapeItem& s,double v){s.ellipse.cx=v;}},
-			{QStringLiteral("ÖĞĞÄ Y"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cy;}, [](DrawShapeItem& s,double v){s.ellipse.cy=v;}},
-			{QStringLiteral("°ëÖá r1"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r1;}, [](DrawShapeItem& s,double v){s.ellipse.r1=v;}},
-			{QStringLiteral("°ëÖá r2"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r2;}, [](DrawShapeItem& s,double v){s.ellipse.r2=v;}},
-			{QStringLiteral("½Ç¶È"),    -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.angle;}, [](DrawShapeItem& s,double v){s.ellipse.angle=v;}},
+			{QStringLiteral("ä¸­å¿ƒ X"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cx;}, [](DrawShapeItem& s,double v){s.ellipse.cx=v;}},
+			{QStringLiteral("ä¸­å¿ƒ Y"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cy;}, [](DrawShapeItem& s,double v){s.ellipse.cy=v;}},
+			{QStringLiteral("åŠè½´ r1"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r1;}, [](DrawShapeItem& s,double v){s.ellipse.r1=v;}},
+			{QStringLiteral("åŠè½´ r2"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r2;}, [](DrawShapeItem& s,double v){s.ellipse.r2=v;}},
+			{QStringLiteral("è§’åº¦"),    -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.angle;}, [](DrawShapeItem& s,double v){s.ellipse.angle=v;}},
 		}; break;
 	case Shape_Ring:
 		fields = {
-			{QStringLiteral("ÖĞĞÄ X"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cx;}, [](DrawShapeItem& s,double v){s.ring.cx=v;}},
-			{QStringLiteral("ÖĞĞÄ Y"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cy;}, [](DrawShapeItem& s,double v){s.ring.cy=v;}},
-			{QStringLiteral("°ë¾¶ r1"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r1;}, [](DrawShapeItem& s,double v){s.ring.r1=v;}},
-			{QStringLiteral("°ë¾¶ r2"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r2;}, [](DrawShapeItem& s,double v){s.ring.r2=v;}},
+			{QStringLiteral("ä¸­å¿ƒ X"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cx;}, [](DrawShapeItem& s,double v){s.ring.cx=v;}},
+			{QStringLiteral("ä¸­å¿ƒ Y"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cy;}, [](DrawShapeItem& s,double v){s.ring.cy=v;}},
+			{QStringLiteral("åŠå¾„ r1"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r1;}, [](DrawShapeItem& s,double v){s.ring.r1=v;}},
+			{QStringLiteral("åŠå¾„ r2"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r2;}, [](DrawShapeItem& s,double v){s.ring.r2=v;}},
 		}; break;
 	case Shape_Arc:
 		fields = {
-			{QStringLiteral("ÖĞĞÄ X"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cx;},    [](DrawShapeItem& s,double v){s.arc.cx=v;}},
-			{QStringLiteral("ÖĞĞÄ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cy;},    [](DrawShapeItem& s,double v){s.arc.cy=v;}},
-			{QStringLiteral("°ë¾¶1"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rOuter;}, [](DrawShapeItem& s,double v){s.arc.rOuter=v;}},
-			{QStringLiteral("°ë¾¶2"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rInner;}, [](DrawShapeItem& s,double v){s.arc.rInner=v;}},
-			{QStringLiteral("ÆğÊ¼½Ç"), 0.0, 360.0, [](const DrawShapeItem& s){return s.arc.startAngle;}, [](DrawShapeItem& s,double v){s.arc.startAngle=v;}},
-			{QStringLiteral("¿ç¶È"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.arc.r1;},       [](DrawShapeItem& s,double v){s.arc.r1=v;}},
+			{QStringLiteral("ä¸­å¿ƒ X"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cx;},    [](DrawShapeItem& s,double v){s.arc.cx=v;}},
+			{QStringLiteral("ä¸­å¿ƒ Y"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cy;},    [](DrawShapeItem& s,double v){s.arc.cy=v;}},
+			{QStringLiteral("åŠå¾„1"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rOuter;}, [](DrawShapeItem& s,double v){s.arc.rOuter=v;}},
+			{QStringLiteral("åŠå¾„2"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rInner;}, [](DrawShapeItem& s,double v){s.arc.rInner=v;}},
+			{QStringLiteral("èµ·å§‹è§’"), 0.0, 360.0, [](const DrawShapeItem& s){return s.arc.startAngle;}, [](DrawShapeItem& s,double v){s.arc.startAngle=v;}},
+			{QStringLiteral("è·¨åº¦"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.arc.r1;},       [](DrawShapeItem& s,double v){s.arc.r1=v;}},
 		}; break;
 	case Shape_Polygon:
-		// ¶¯Ì¬´¦Àí
+		// åŠ¨æ€å¤„ç†
 		break;
 	default: break;
 	}
@@ -1340,7 +1342,7 @@ void ImageCanvasView::applyParamAndRedraw() {
 	hideParamPanel();
 }
 
-// ===== »æÖÆÁ÷³Ì =====
+// ===== ç»˜åˆ¶æµç¨‹ =====
 
 void ImageCanvasView::startDraw(DrawShapeType type)
 {
@@ -1398,7 +1400,7 @@ void ImageCanvasView::commitShapeGeneric(DrawShapeType type)
 	}
 }
 
-// ===== Ô²ĞÎÌá½»£¨Èıµã»­Ô²£© =====
+// ===== åœ†å½¢æäº¤ï¼ˆä¸‰ç‚¹ç”»åœ†ï¼‰ =====
 void ImageCanvasView::commitCircle()
 {
 	double x1=m_circlePt1.x(), y1=m_circlePt1.y();
@@ -1417,10 +1419,10 @@ void ImageCanvasView::commitCircle()
 	rebuildShapeOnScene(shape);
 }
 
-// ===== Ô²»·Ìá½»£¨ËÄµã¹¹Ôì£© =====
+// ===== åœ†ç¯æäº¤ï¼ˆå››ç‚¹æ„é€ ï¼‰ =====
 void ImageCanvasView::commitRing()
 {
-	// µÚÒ»¸öÔ²µÄ°ë¾¶´æÓÚ m_dragStartRect.w/2
+	// ç¬¬ä¸€ä¸ªåœ†çš„åŠå¾„å­˜äº m_dragStartRect.w/2
 	double cx = m_dragStartRect.cx, cy = m_dragStartRect.cy;
 	double r1 = m_dragStartRect.w / 2.0;
 	double r2 = 0;
@@ -1440,7 +1442,7 @@ void ImageCanvasView::commitRing()
 	rebuildShapeOnScene(shape);
 }
 
-// ===== Í¬ĞÄË«Ô²»¡Çó½â =====
+// ===== æ‰‡ç¯æ±‚è§£ =====
 static bool solveConcentricArc(const QPointF& A, const QPointF& B, double r1, double r2, QPointF& O, QPointF& P)
 {
 	double d = std::sqrt((B.x()-A.x())*(B.x()-A.x())+(B.y()-A.y())*(B.y()-A.y()));
@@ -1461,7 +1463,7 @@ static bool solveConcentricArc(const QPointF& A, const QPointF& B, double r1, do
 	return true;
 }
 
-// ===== Í¬ĞÄË«Ô²»¡Ìá½» =====
+// ===== æ‰‡ç¯æäº¤ =====
 void ImageCanvasView::commitArc()
 {
 	double cx=m_dragStartRect.cx,cy=m_dragStartRect.cy,r1=m_dragStartRect.w,r2=m_dragStartRect.h;
@@ -1476,14 +1478,14 @@ void ImageCanvasView::commitArc()
 	clearSceneShape();m_activeShape=shape;rebuildShapeOnScene(shape);
 }
 
-// ===== ¶à±ßĞÎÌá½» =====
+// ===== å¤šè¾¹å½¢æäº¤ =====
 void ImageCanvasView::commitPolygon()
 {
 	if(m_tempPolyPts.size()<3)return;
 	DrawShapeItem* shape=findShapeByType(Shape_Polygon);
 	if(!shape){shape=new DrawShapeItem(Shape_Polygon);m_shapes.append(shape);}
 	shape->polygon.pts=m_tempPolyPts;
-	// ÇåÀí»æÖÆ±ê¼Ç
+	// æ¸…ç†ç»˜åˆ¶æ ‡è®°
 	for(auto* mk:m_circleMarkers){m_scene->removeItem(mk);delete mk;}
 	m_circleMarkers.clear();
 	if(m_ghostPolyLine){m_scene->removeItem(m_ghostPolyLine);delete m_ghostPolyLine;m_ghostPolyLine=nullptr;}
@@ -1536,7 +1538,7 @@ void ImageCanvasView::commitRotatedRect()
 	rebuildShapeOnScene(shape);
 }
 
-// ===== ÍÖÔ²Ìá½» =====
+// ===== æ¤­åœ†æäº¤ =====
 void ImageCanvasView::commitEllipse()
 {
 	if (!m_ghostRect) return;
@@ -1554,7 +1556,7 @@ void ImageCanvasView::commitEllipse()
 	rebuildShapeOnScene(shape);
 }
 
-// ===== ĞÎ×´²éÑ¯ =====
+// ===== å½¢çŠ¶æŸ¥è¯¢ =====
 
 DrawShapeItem* ImageCanvasView::findShapeByType(DrawShapeType type)
 {
@@ -1563,13 +1565,13 @@ DrawShapeItem* ImageCanvasView::findShapeByType(DrawShapeType type)
 	return nullptr;
 }
 
-// ===== Í¼ĞÎ¹¹½¨ =====
+// ===== å›¾å½¢æ„å»º =====
 
-// buildShapeItem ÒÑÇ¨Èë ShapePainter::buildItem
+// buildShapeItem å·²è¿å…¥ ShapePainter::buildItem
 
 
-// ===== ¿ØÖÆµã & ÖĞĞÄÊ®×Ö =====
-// (ÒÑÇ¨ÒÆÖÁ ShapeHandleHelper)
+// ===== æ§åˆ¶ç‚¹ & ä¸­å¿ƒåå­— =====
+// (å·²è¿ç§»è‡³ ShapeHandleHelper)
 
 bool ImageCanvasView::isPointInShape(const DrawShapeItem* shape, const QPointF& scenePos) const
 {
@@ -1620,7 +1622,7 @@ bool ImageCanvasView::isPointInShape(const DrawShapeItem* shape, const QPointF& 
 		double sa=normAngle360(shape->arc.startAngle),span=shape->arc.r1;
 		double rel=ang-sa;if(rel<0)rel+=360.0;
 		if(span>=0)return rel<=span;
-		return rel>=360.0+span;  // Ë³Ê±Õë»¡£º¼ì²â"·ÇÈ±¿Ú"·¶Î§
+		return rel>=360.0+span;  // é¡ºæ—¶é’ˆå¼§ï¼šæ£€æµ‹"éç¼ºå£"èŒƒå›´
 	}
 	case Shape_Polygon:
 	{
@@ -1648,7 +1650,7 @@ QGraphicsEllipseItem* ImageCanvasView::handleAt(const QPointF& scenePos) const
 	return m_handleHelper->handleAt(*m_activeHandleSet, scenePos);
 }
 
-// ===== Handle ÍÏ×§ =====
+// ===== Handle æ‹–æ‹½ =====
 
 
 
@@ -1703,7 +1705,7 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 
 	if (m_isRotating)
 	{
-		// Ğı×ªÊÖ±ú ¡ú ¼ÆËãÖĞĞÄµ½Êó±êµÄ½Ç¶È
+		// æ—‹è½¬æ‰‹æŸ„ â†’ è®¡ç®—ä¸­å¿ƒåˆ°é¼ æ ‡çš„è§’åº¦
 		double cx = m_dragShape->rotatedRect.cx;
 		double cy = m_dragShape->rotatedRect.cy;
 		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
@@ -1713,11 +1715,11 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 	}
 	else if (m_isDraggingHandle)
 	{
-		// ½«Êó±êµãÄæĞı×ªµ½¾Ö²¿×ø±êÏµ£¨Ïà¶ÔÓÚÍÏ×§ÆğÊ¼ÖĞĞÄ£©
-		double angle = m_dragStartRect.cx;  // m_dragStartRect.cx ´æµÄÊÇ m_dragStartAngle ¶ÔÓ¦µÄÔ­Ê¼½Ç¶È... 
-		// ²»¶Ô£¬m_dragStartRect ÊÇ Rect ÀàĞÍ£¬´æµÄÊÇÆğÊ¼Ê±¿ÌµÄ cx,cy,w,h
-		// ¶ÔÓÚĞı×ª¾ØĞÎ£¬m_dragStartRect ´æµÄÊÇÍÏ×§¿ªÊ¼Ê±µÄ rotatedRect µÄ cx,cy,w,h
-		double startAngle = m_dragStartAngle;  // ÍÏ×§ÆğÊ¼½Ç¶È
+		// å°†é¼ æ ‡ç‚¹é€†æ—‹è½¬åˆ°å±€éƒ¨åæ ‡ç³»ï¼ˆç›¸å¯¹äºæ‹–æ‹½èµ·å§‹ä¸­å¿ƒï¼‰
+		double angle = m_dragStartRect.cx;  // m_dragStartRect.cx å­˜çš„æ˜¯ m_dragStartAngle å¯¹åº”çš„åŸå§‹è§’åº¦... 
+		// ä¸å¯¹ï¼Œm_dragStartRect æ˜¯ Rect ç±»å‹ï¼Œå­˜çš„æ˜¯èµ·å§‹æ—¶åˆ»çš„ cx,cy,w,h
+		// å¯¹äºæ—‹è½¬çŸ©å½¢ï¼Œm_dragStartRect å­˜çš„æ˜¯æ‹–æ‹½å¼€å§‹æ—¶çš„ rotatedRect çš„ cx,cy,w,h
+		double startAngle = m_dragStartAngle;  // æ‹–æ‹½èµ·å§‹è§’åº¦
 		double rad   = -qDegreesToRadians(startAngle);
 		double sx    = scenePos.x();
 		double sy    = scenePos.y();
@@ -1734,17 +1736,17 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 
 		double left = left0, right = right0, top = top0, bottom = bottom0;
 
-		// ºÍÆÕÍ¨¾ØĞÎÒ»ÑùµÄ 8 ·½ÏòÍÏ×§
+		// å’Œæ™®é€šçŸ©å½¢ä¸€æ ·çš„ 8 æ–¹å‘æ‹–æ‹½
 		switch (m_dragHandleIndex)
 		{
-		case 0: left = lx; top = ly;         break;  // ×óÉÏ½Ç
-		case 1:           top = ly;          break;  // ÉÏ±ßÖĞµã
-		case 2: right = lx; top = ly;        break;  // ÓÒÉÏ½Ç
-		case 3: right = lx;                  break;  // ÓÒ±ßÖĞµã
-		case 4: right = lx; bottom = ly;     break;  // ÓÒÏÂ½Ç
-		case 5:           bottom = ly;       break;  // ÏÂ±ßÖĞµã
-		case 6: left = lx; bottom = ly;      break;  // ×óÏÂ½Ç
-		case 7: left = lx;                   break;  // ×ó±ßÖĞµã
+		case 0: left = lx; top = ly;         break;  // å·¦ä¸Šè§’
+		case 1:           top = ly;          break;  // ä¸Šè¾¹ä¸­ç‚¹
+		case 2: right = lx; top = ly;        break;  // å³ä¸Šè§’
+		case 3: right = lx;                  break;  // å³è¾¹ä¸­ç‚¹
+		case 4: right = lx; bottom = ly;     break;  // å³ä¸‹è§’
+		case 5:           bottom = ly;       break;  // ä¸‹è¾¹ä¸­ç‚¹
+		case 6: left = lx; bottom = ly;      break;  // å·¦ä¸‹è§’
+		case 7: left = lx;                   break;  // å·¦è¾¹ä¸­ç‚¹
 		}
 		if (left > right) std::swap(left, right);
 		if (top > bottom) std::swap(top, bottom);
@@ -1754,7 +1756,7 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 		double newCxLocal = (left + right) / 2.0;
 		double newCyLocal = (top + bottom) / 2.0;
 
-		// ĞÂÖĞĞÄ´Ó¾Ö²¿×ø±ê×ª»ØÊÀ½ç×ø±ê£¨ÈÆÍÏ×§ÆğÊ¼ÖĞĞÄĞı×ª£©
+		// æ–°ä¸­å¿ƒä»å±€éƒ¨åæ ‡è½¬å›ä¸–ç•Œåæ ‡ï¼ˆç»•æ‹–æ‹½èµ·å§‹ä¸­å¿ƒæ—‹è½¬ï¼‰
 		double cosA = qCos(qDegreesToRadians(startAngle));
 		double sinA = qSin(qDegreesToRadians(startAngle));
 		m_dragShape->rotatedRect.cx = m_dragStartRect.cx + newCxLocal*cosA - newCyLocal*sinA;
@@ -1767,13 +1769,13 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 	}
 }
 
-// ===== Ô²ĞÎ Handle ÍÏ×§ =====
+// ===== åœ†å½¢ Handle æ‹–æ‹½ =====
 void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
 {
 	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 4) return;
 
-	// Ô²ĞÎ 4 ¸ö¿ØÖÆµã£º0=ÓÒ, 1=ÉÏ, 2=×ó, 3=ÏÂ
-	// ÍÏ×§Ê±¸Ä±ä°ë¾¶£¬±£³ÖÖĞĞÄ
+	// åœ†å½¢ 4 ä¸ªæ§åˆ¶ç‚¹ï¼š0=å³, 1=ä¸Š, 2=å·¦, 3=ä¸‹
+	// æ‹–æ‹½æ—¶æ”¹å˜åŠå¾„ï¼Œä¿æŒä¸­å¿ƒ
 	double cx0 = m_dragStartRect.cx, cy0 = m_dragStartRect.cy;
 	double r0  = m_dragStartRect.w / 2.0;
 
@@ -1783,10 +1785,10 @@ void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
 	double newR = 0;
 	switch (m_dragHandleIndex)
 	{
-	case 0: newR = dx;                    break; // ÓÒ±ß ¡ú r = dx
-	case 1: newR = -dy;                   break; // ÉÏ±ß ¡ú r = -dy
-	case 2: newR = -dx;                   break; // ×ó±ß ¡ú r = -dx
-	case 3: newR = dy;                    break; // ÏÂ±ß ¡ú r = dy
+	case 0: newR = dx;                    break; // å³è¾¹ â†’ r = dx
+	case 1: newR = -dy;                   break; // ä¸Šè¾¹ â†’ r = -dy
+	case 2: newR = -dx;                   break; // å·¦è¾¹ â†’ r = -dx
+	case 3: newR = dy;                    break; // ä¸‹è¾¹ â†’ r = dy
 	}
 	newR = std::max(newR, 1.5);
 
@@ -1798,12 +1800,12 @@ void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
 	syncParamPanel(m_dragShape);
 }
 
-// ===== Ô²»· Handle ÍÏ×§ =====
+// ===== åœ†ç¯ Handle æ‹–æ‹½ =====
 void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 {
 	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 8) return;
 
-	// m_dragStartRect: cx, cy, ÍÏ×§Ç° r1*2, ÍÏ×§Ç° r2*2
+	// m_dragStartRect: cx, cy, æ‹–æ‹½å‰ r1*2, æ‹–æ‹½å‰ r2*2
 	double cx0 = m_dragStartRect.cx, cy0 = m_dragStartRect.cy;
 	double oldR1 = m_dragStartRect.w / 2.0;
 	double oldR2 = m_dragStartRect.h / 2.0;
@@ -1811,9 +1813,9 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 	double dx = scenePos.x() - cx0;
 	double dy = scenePos.y() - cy0;
 
-	// 0-3 ÊÇÔ­À´½Ï´ó°ë¾¶µÄ¿ØÖÆµã£¬4-7 ÊÇÔ­À´½ÏĞ¡°ë¾¶µÄ¿ØÖÆµã
-	// ÍÏ×§ÄÄ¸ö¾ÍĞŞ¸Ä¶ÔÓ¦µÄ r1 »ò r2£¬²»ÏŞÖÆ´óĞ¡¹ØÏµ
-	// ÏÔÊ¾Ê±×Ô¶¯°´ max/min Çø·ÖÍâÔ²ÄÚÔ²
+	// 0-3 æ˜¯åŸæ¥è¾ƒå¤§åŠå¾„çš„æ§åˆ¶ç‚¹ï¼Œ4-7 æ˜¯åŸæ¥è¾ƒå°åŠå¾„çš„æ§åˆ¶ç‚¹
+	// æ‹–æ‹½å“ªä¸ªå°±ä¿®æ”¹å¯¹åº”çš„ r1 æˆ– r2ï¼Œä¸é™åˆ¶å¤§å°å…³ç³»
+	// æ˜¾ç¤ºæ—¶è‡ªåŠ¨æŒ‰ max/min åŒºåˆ†å¤–åœ†å†…åœ†
 	if (m_dragHandleIndex < 4)
 	{
 		double newR = 0;
@@ -1825,7 +1827,7 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 		case 3: newR = dy;    break;
 		}
 		newR = std::max(newR, 1.0);
-		// ¸üĞÂµ±Ç°ÍÏ×§µÄÄÇ¸ö°ë¾¶£¨¿ÉÄÜÊÇ r1 Ò²¿ÉÄÜÊÇ r2£©
+		// æ›´æ–°å½“å‰æ‹–æ‹½çš„é‚£ä¸ªåŠå¾„ï¼ˆå¯èƒ½æ˜¯ r1 ä¹Ÿå¯èƒ½æ˜¯ r2ï¼‰
 		if (oldR1 >= oldR2)
 			m_dragShape->ring.r1 = newR;
 		else
@@ -1855,7 +1857,7 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 	syncParamPanel(m_dragShape);
 }
 
-// ===== ¶à±ßĞÎ Handle ÍÏ×§ =====
+// ===== å¤šè¾¹å½¢ Handle æ‹–æ‹½ =====
 void ImageCanvasView::updatePolygonFromHandle(const QPointF& scenePos)
 {
 	if(!m_dragShape||m_dragHandleIndex<0||m_dragHandleIndex>=m_dragShape->polygon.pts.size())return;
@@ -1864,14 +1866,14 @@ void ImageCanvasView::updatePolygonFromHandle(const QPointF& scenePos)
 	syncParamPanel(m_dragShape);
 }
 
-// ===== Ô²»¡ Handle ÍÏ×§ =====
+// ===== åœ†å¼§ Handle æ‹–æ‹½ =====
 void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 {
 	if (!m_dragShape) return;
 
 	double cx = m_dragShape->arc.cx, cy = m_dragShape->arc.cy;
 
-	// Ğı×ª
+	// æ—‹è½¬
 	if (m_isRotating) {
 		double newMidAng = normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy, scenePos.x()-cx)));
 		double delta = newMidAng - m_dragStartAngle;
@@ -1891,7 +1893,7 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->arc.startAngle=na;else m_dragShape->arc.endAngle=na;
 		double sa=m_dragShape->arc.startAngle,ea=m_dragShape->arc.endAngle;bool cw=(m_dragShape->arc.r1<0);
 		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->arc.r1=cw?(sf-360.0):sf;
-		// ¹éÒ»»¯Î´ÍÏ×§µÄÄÇÒ»¶Ë£¬±ÜÃâ²ĞÁô >360 µÄÖµµ¼ÖÂºóĞø¼ÆËãÒì³£
+		// å½’ä¸€åŒ–æœªæ‹–æ‹½çš„é‚£ä¸€ç«¯ï¼Œé¿å…æ®‹ç•™ >360 çš„å€¼å¯¼è‡´åç»­è®¡ç®—å¼‚å¸¸
 		if(m_dragHandleIndex==0||m_dragHandleIndex==4)
 			m_dragShape->arc.endAngle=normAngle360(m_dragShape->arc.endAngle);
 		else
@@ -1902,14 +1904,14 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 	syncParamPanel(m_dragShape);
 }
 
-// ===== ÍÖÔ² Handle ÍÏ×§ =====
+// ===== æ¤­åœ† Handle æ‹–æ‹½ =====
 void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 {
 	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 4) return;
 
 	if (m_isRotating)
 	{
-		// Ğı×ªÊÖ±ú ¡ú ¼ÆËã½Ç¶È
+		// æ—‹è½¬æ‰‹æŸ„ â†’ è®¡ç®—è§’åº¦
 		double cx = m_dragShape->ellipse.cx;
 		double cy = m_dragShape->ellipse.cy;
 		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
@@ -1919,7 +1921,7 @@ void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 		return;
 	}
 
-	// ÆÕÍ¨¿ØÖÆµãÍÏ×§£ºÏÈ×ª»Ø¾Ö²¿×ø±êÏµ
+	// æ™®é€šæ§åˆ¶ç‚¹æ‹–æ‹½ï¼šå…ˆè½¬å›å±€éƒ¨åæ ‡ç³»
 	double angle = m_dragShape->ellipse.angle;
 	double rad   = -qDegreesToRadians(angle);
 	double dx    = scenePos.x() - m_dragStartRect.cx;
@@ -1932,10 +1934,10 @@ void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 
 	switch (m_dragHandleIndex)
 	{
-	case 0: newR1 =  lx; break;  // ÓÒ
-	case 1: newR2 = -ly; break;  // ÉÏ
-	case 2: newR1 = -lx; break;  // ×ó
-	case 3: newR2 =  ly; break;  // ÏÂ
+	case 0: newR1 =  lx; break;  // å³
+	case 1: newR2 = -ly; break;  // ä¸Š
+	case 2: newR1 = -lx; break;  // å·¦
+	case 3: newR2 =  ly; break;  // ä¸‹
 	}
 	newR1 = std::max(newR1, 1.5);
 	newR2 = std::max(newR2, 1.5);
