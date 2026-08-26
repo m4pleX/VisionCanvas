@@ -2,6 +2,7 @@
 #include "ShapePainter.h"
 #include "ShapeHandleHelper.h"
 #include "ParamPanelWidget.h"
+#include "ScaleConfig.h"
 
 #include <QtAlgorithms>
 #include <QFile>
@@ -176,8 +177,8 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			QWheelEvent* wheel = static_cast<QWheelEvent*>(event);
 			if (!(wheel->modifiers() & Qt::ControlModifier)) { event->accept(); return true; }
 			QPointF oldPos = ui.canvas_view_main->mapToScene(wheel->position().toPoint());
-			m_scaleValue *= (wheel->angleDelta().y() > 0 ? 1.1 : 0.9);
-			m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
+			m_scaleValue *= (wheel->angleDelta().y() > 0 ? ScaleConfig::WheelStepUp : ScaleConfig::WheelStepDown);
+			m_scaleValue = ScaleConfig::clamp(m_scaleValue);
 
 			QTransform trans;
 			trans.scale(m_scaleValue, m_scaleValue);
@@ -952,16 +953,16 @@ void ImageCanvasView::keyPressEvent(QKeyEvent* event)
 
 void ImageCanvasView::updateScaleUI()
 {
-	m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
+	m_scaleValue = ScaleConfig::clamp(m_scaleValue);
 	m_toolbar->setScale(m_scaleValue);
 	QTransform t;
 	t.scale(m_scaleValue, m_scaleValue);
 	ui.canvas_view_main->setTransform(t);
 }
 
-void ImageCanvasView::slotZoomIn()   { m_scaleValue += 0.01; m_toolbar->setScale(m_scaleValue); ui.canvas_view_main->setTransform(QTransform::fromScale(m_scaleValue, m_scaleValue)); }
-void ImageCanvasView::slotZoomOut()  { m_scaleValue -= 0.01; m_toolbar->setScale(m_scaleValue); ui.canvas_view_main->setTransform(QTransform::fromScale(m_scaleValue, m_scaleValue)); }
-void ImageCanvasView::slotZoomReset(){ m_scaleValue = 1.0; m_toolbar->setScale(1.0); ui.canvas_view_main->setTransform(QTransform::fromScale(1.0, 1.0)); }
+void ImageCanvasView::slotZoomIn()   { m_scaleValue = ScaleConfig::clamp(m_scaleValue + ScaleConfig::ButtonStep); m_toolbar->setScale(m_scaleValue); ui.canvas_view_main->setTransform(QTransform::fromScale(m_scaleValue, m_scaleValue)); }
+void ImageCanvasView::slotZoomOut()  { m_scaleValue = ScaleConfig::clamp(m_scaleValue - ScaleConfig::ButtonStep); m_toolbar->setScale(m_scaleValue); ui.canvas_view_main->setTransform(QTransform::fromScale(m_scaleValue, m_scaleValue)); }
+void ImageCanvasView::slotZoomReset(){ m_scaleValue = ScaleConfig::DefaultScale; m_toolbar->setScale(ScaleConfig::DefaultScale); ui.canvas_view_main->setTransform(QTransform::fromScale(ScaleConfig::DefaultScale, ScaleConfig::DefaultScale)); }
 
 void ImageCanvasView::slotZoomFit()
 {
@@ -969,8 +970,7 @@ void ImageCanvasView::slotZoomFit()
 	if (pm.isNull()) return;
 	QRectF imageRect = pm.rect();
 	ui.canvas_view_main->fitInView(imageRect, Qt::KeepAspectRatio);
-	m_scaleValue = ui.canvas_view_main->transform().m11();
-	m_scaleValue = qBound(0.2, m_scaleValue, 5.0);
+	m_scaleValue = ScaleConfig::clamp(ui.canvas_view_main->transform().m11());
 	m_toolbar->setScale(m_scaleValue);
 }
 

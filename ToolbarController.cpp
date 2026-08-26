@@ -1,4 +1,5 @@
 #include "ToolbarController.h"
+#include "ScaleConfig.h"
 #include <QLabel>
 #include <QPushButton>
 #include <QtMath>
@@ -9,7 +10,7 @@ ToolbarController::ToolbarController(QPushButton* btnCross, QPushButton* btnCtrl
 	  m_btnLineWidth(btnLineWidth), m_lblScale(lblScale), m_lblRes(lblRes) {}
 
 void ToolbarController::setScale(double val) {
-	m_scale = qBound(0.2, val, 5.0);
+	m_scale = ScaleConfig::clamp(val);
 	m_lblScale->setText(QString("%1%").arg(qRound(m_scale * 100.0)));
 }
 

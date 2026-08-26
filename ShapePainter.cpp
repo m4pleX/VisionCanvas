@@ -60,6 +60,7 @@ void ShapePainter::applyStyle(QGraphicsItem* item, const QColor& color, double p
 	if (!item) return;
 	int w = isHovered ? (int)(penWidth + 2) : (int)penWidth;
 	QPen pen(color, w);
+	pen.setCosmetic(true);  
 	if (auto* r = dynamic_cast<QGraphicsRectItem*>(item))       { r->setPen(pen); r->setBrush(Qt::NoBrush); }
 	else if (auto* po = dynamic_cast<QGraphicsPolygonItem*>(item)) { po->setPen(pen); po->setBrush(Qt::NoBrush); }
 	else if (auto* e = dynamic_cast<QGraphicsEllipseItem*>(item))  { e->setPen(pen); e->setBrush(Qt::NoBrush); }

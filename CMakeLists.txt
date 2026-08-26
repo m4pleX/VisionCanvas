@@ -20,6 +20,7 @@ add_executable(VisionCanvas
         main.cpp
         ParamPanelWidget.cpp
         ParamPanelWidget.h
+        ScaleConfig.h
         ShapeHandleHelper.cpp
         ShapeHandleHelper.h
         ShapePainter.cpp
