@@ -4,6 +4,7 @@
 #include "ParamPanelWidget.h"
 #include "ParamFieldFactory.h"
 #include "ScaleConfig.h"
+#include "ShapeEditor.h"
 #include "ShapeGeometry.h"
 
 #include <QtAlgorithms>
@@ -684,32 +685,42 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 		// 旋转拖拽中
 		if (m_isRotating && event->type() == QEvent::MouseMove)
 		{
-			if (m_dragShape && m_dragShape->type == Shape_Ellipse)
-				updateEllipseFromHandle(scenePos);
-			else if (m_dragShape && m_dragShape->type == Shape_Arc)
-				updateArcFromHandle(scenePos);
-			else
-				updateRotatedRectFromHandle(scenePos);
+			{
+				EditContext ctx{ m_dragStartRect, m_dragHandleIndex, m_isRotating, m_isDraggingHandle, m_dragStartAngle };
+				bool changed = false;
+				if (m_dragShape && m_dragShape->type == Shape_Ellipse)
+					changed = ShapeEditor::updateEllipse(m_dragShape, ctx, scenePos);
+				else if (m_dragShape && m_dragShape->type == Shape_Arc)
+					changed = ShapeEditor::updateArc(m_dragShape, ctx, scenePos);
+				else
+					changed = ShapeEditor::updateRotatedRect(m_dragShape, ctx, scenePos);
+				if (changed) refreshActiveShape();
+			}
 			event->accept();
 			return true;
 		}
 		// Handle 拖拽中
 			if (m_isDraggingHandle && event->type() == QEvent::MouseMove)
 			{
-				if (m_dragShape && m_dragShape->type == Shape_RotateRect)
-					updateRotatedRectFromHandle(scenePos);
-				else if (m_dragShape && m_dragShape->type == Shape_Circle)
-					updateCircleFromHandle(scenePos);
-				else if (m_dragShape && m_dragShape->type == Shape_Ellipse)
-					updateEllipseFromHandle(scenePos);
-				else if (m_dragShape && m_dragShape->type == Shape_Ring)
-					updateRingFromHandle(scenePos);
-			else if (m_dragShape && m_dragShape->type == Shape_Arc)
-				updateArcFromHandle(scenePos);
-			else if (m_dragShape && m_dragShape->type == Shape_Polygon)
-				updatePolygonFromHandle(scenePos);
-			else
-				updateRectFromHandle(scenePos);
+				{
+					EditContext ctx{ m_dragStartRect, m_dragHandleIndex, m_isRotating, m_isDraggingHandle, m_dragStartAngle };
+					bool changed = false;
+					if (m_dragShape && m_dragShape->type == Shape_RotateRect)
+						changed = ShapeEditor::updateRotatedRect(m_dragShape, ctx, scenePos);
+					else if (m_dragShape && m_dragShape->type == Shape_Circle)
+						changed = ShapeEditor::updateCircle(m_dragShape, ctx, scenePos);
+					else if (m_dragShape && m_dragShape->type == Shape_Ellipse)
+						changed = ShapeEditor::updateEllipse(m_dragShape, ctx, scenePos);
+					else if (m_dragShape && m_dragShape->type == Shape_Ring)
+						changed = ShapeEditor::updateRing(m_dragShape, ctx, scenePos);
+					else if (m_dragShape && m_dragShape->type == Shape_Arc)
+						changed = ShapeEditor::updateArc(m_dragShape, ctx, scenePos);
+					else if (m_dragShape && m_dragShape->type == Shape_Polygon)
+						changed = ShapeEditor::updatePolygon(m_dragShape, ctx, scenePos);
+					else
+						changed = ShapeEditor::updateRect(m_dragShape, ctx, scenePos);
+					if (changed) refreshActiveShape();
+				}
 				event->accept();
 				return true;
 			}
@@ -1641,293 +1652,10 @@ void ImageCanvasView::applyShapeHover(bool hover)
 		m_painter->applyStyle(m_shapeItem, m_colorSelected, m_penWidth, hover);
 }
 
-void ImageCanvasView::updateRectFromHandle(const QPointF& scenePos)
-{
-	if (!m_dragShape || m_dragHandleIndex < 0) return;
-
-	double sx = scenePos.x(), sy = scenePos.y();
-	double& cx = m_dragShape->cx;
-	double& cy = m_dragShape->cy;
-	double& w  = m_dragShape->w;
-	double& h  = m_dragShape->h;
-
-	double left0   = m_dragStartRect.cx - m_dragStartRect.w / 2.0;
-	double right0  = m_dragStartRect.cx + m_dragStartRect.w / 2.0;
-	double top0    = m_dragStartRect.cy - m_dragStartRect.h / 2.0;
-	double bottom0 = m_dragStartRect.cy + m_dragStartRect.h / 2.0;
-
-	double left = left0, right = right0, top = top0, bottom = bottom0;
-
-	switch (m_dragHandleIndex)
-	{
-	case 0: left = sx; top = sy;    break;
-	case 1: top = sy;               break;
-	case 2: right = sx; top = sy;   break;
-	case 3: right = sx;             break;
-	case 4: right = sx; bottom = sy;break;
-	case 5: bottom = sy;            break;
-	case 6: left = sx; bottom = sy; break;
-	case 7: left = sx;              break;
-	}
-	if (left > right) std::swap(left, right);
-	if (top > bottom) std::swap(top, bottom);
-	cx = (left+right)/2.0;
-	cy = (top+bottom)/2.0;
-	w  = std::max(right-left, 3.0);
-	h  = std::max(bottom-top, 3.0);
-
-	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-	syncParamPanel(m_dragShape);
-}
-
-void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
+/*  拖拽编辑后统一刷新控制点位置与参数面板（等价于原 update*FromHandle 末尾副作用） */
+void ImageCanvasView::refreshActiveShape()
 {
 	if (!m_dragShape) return;
-
-	if (m_isRotating)
-	{
-		// 旋转手柄 → 计算中心到鼠标的角度
-		double cx = m_dragShape->cx;
-		double cy = m_dragShape->cy;
-		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
-		m_dragShape->angle = angle;
-		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-		syncParamPanel(m_dragShape);
-	}
-	else if (m_isDraggingHandle)
-	{
-		// 将鼠标点逆旋转到局部坐标系（相对于拖拽起始中心）
-		double angle = m_dragStartRect.cx;  // m_dragStartRect.cx 存的是 m_dragStartAngle 对应的原始角度... 
-		// 不对，m_dragStartRect 是 Rect 类型，存的是起始时刻的 cx,cy,w,h
-		// 对于旋转矩形，m_dragStartRect 存的是拖拽开始时的 rotatedRect 的 cx,cy,w,h
-		double startAngle = m_dragStartAngle;  // 拖拽起始角度
-		double rad   = -qDegreesToRadians(startAngle);
-		double sx    = scenePos.x();
-		double sy    = scenePos.y();
-		double dx    = sx - m_dragStartRect.cx;
-		double dy    = sy - m_dragStartRect.cy;
-		double lx    = dx * qCos(rad) - dy * qSin(rad);
-		double ly    = dx * qSin(rad) + dy * qCos(rad);
-
-		double startW = m_dragStartRect.w, startH = m_dragStartRect.h;
-		double left0   = -startW / 2.0;
-		double right0  =  startW / 2.0;
-		double top0    = -startH / 2.0;
-		double bottom0 =  startH / 2.0;
-
-		double left = left0, right = right0, top = top0, bottom = bottom0;
-
-		// 和普通矩形一样的 8 方向拖拽
-		switch (m_dragHandleIndex)
-		{
-		case 0: left = lx; top = ly;         break;  // 左上角
-		case 1:           top = ly;          break;  // 上边中点
-		case 2: right = lx; top = ly;        break;  // 右上角
-		case 3: right = lx;                  break;  // 右边中点
-		case 4: right = lx; bottom = ly;     break;  // 右下角
-		case 5:           bottom = ly;       break;  // 下边中点
-		case 6: left = lx; bottom = ly;      break;  // 左下角
-		case 7: left = lx;                   break;  // 左边中点
-		}
-		if (left > right) std::swap(left, right);
-		if (top > bottom) std::swap(top, bottom);
-
-		double newW = std::max(right - left, 3.0);
-		double newH = std::max(bottom - top, 3.0);
-		double newCxLocal = (left + right) / 2.0;
-		double newCyLocal = (top + bottom) / 2.0;
-
-		// 新中心从局部坐标转回世界坐标（绕拖拽起始中心旋转）
-		double cosA = qCos(qDegreesToRadians(startAngle));
-		double sinA = qSin(qDegreesToRadians(startAngle));
-		m_dragShape->cx = m_dragStartRect.cx + newCxLocal*cosA - newCyLocal*sinA;
-		m_dragShape->cy = m_dragStartRect.cy + newCxLocal*sinA + newCyLocal*cosA;
-		m_dragShape->w  = newW;
-		m_dragShape->h  = newH;
-
-		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-		syncParamPanel(m_dragShape);
-	}
-}
-
-// ===== 圆形 Handle 拖拽 =====
-void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
-{
-	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 4) return;
-
-	// 圆形 4 个控制点：0=右, 1=上, 2=左, 3=下
-	// 拖拽时改变半径，保持中心
-	double cx0 = m_dragStartRect.cx, cy0 = m_dragStartRect.cy;
-	double r0  = m_dragStartRect.w / 2.0;
-
-	double dx = scenePos.x() - cx0;
-	double dy = scenePos.y() - cy0;
-
-	double newR = 0;
-	switch (m_dragHandleIndex)
-	{
-	case 0: newR = dx;                    break; // 右边 → r = dx
-	case 1: newR = -dy;                   break; // 上边 → r = -dy
-	case 2: newR = -dx;                   break; // 左边 → r = -dx
-	case 3: newR = dy;                    break; // 下边 → r = dy
-	}
-	newR = std::max(newR, 1.5);
-
-	m_dragShape->cx = cx0;
-	m_dragShape->cy = cy0;
-	m_dragShape->r  = newR;
-
-	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-	syncParamPanel(m_dragShape);
-}
-
-// ===== 圆环 Handle 拖拽 =====
-void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
-{
-	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 8) return;
-
-	// m_dragStartRect: cx, cy, 拖拽前 r1*2, 拖拽前 r2*2
-	double cx0 = m_dragStartRect.cx, cy0 = m_dragStartRect.cy;
-	double oldR1 = m_dragStartRect.w / 2.0;
-	double oldR2 = m_dragStartRect.h / 2.0;
-
-	double dx = scenePos.x() - cx0;
-	double dy = scenePos.y() - cy0;
-
-	// 0-3 是原来较大半径的控制点，4-7 是原来较小半径的控制点
-	// 拖拽哪个就修改对应的 r1 或 r2，不限制大小关系
-	// 显示时自动按 max/min 区分外圆内圆
-	if (m_dragHandleIndex < 4)
-	{
-		double newR = 0;
-		switch (m_dragHandleIndex)
-		{
-		case 0: newR = dx;    break;
-		case 1: newR = -dy;   break;
-		case 2: newR = -dx;   break;
-		case 3: newR = dy;    break;
-		}
-		newR = std::max(newR, 1.0);
-		// 更新当前拖拽的那个半径（可能是 r1 也可能是 r2）
-		if (oldR1 >= oldR2)
-			m_dragShape->r = newR;
-		else
-			m_dragShape->r2 = newR;
-	}
-	else
-	{
-		double newR = 0;
-		switch (m_dragHandleIndex)
-		{
-		case 4: newR = dx;    break;
-		case 5: newR = -dy;   break;
-		case 6: newR = -dx;   break;
-		case 7: newR = dy;    break;
-		}
-		newR = std::max(newR, 1.0);
-		if (oldR1 >= oldR2)
-			m_dragShape->r2 = newR;
-		else
-			m_dragShape->r = newR;
-	}
-
-	m_dragShape->cx = cx0;
-	m_dragShape->cy = cy0;
-
-	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-	syncParamPanel(m_dragShape);
-}
-
-// ===== 多边形 Handle 拖拽 =====
-void ImageCanvasView::updatePolygonFromHandle(const QPointF& scenePos)
-{
-	if(!m_dragShape||m_dragHandleIndex<0||m_dragHandleIndex>=m_dragShape->pts.size())return;
-	m_dragShape->pts[m_dragHandleIndex]=scenePos;
-	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-	syncParamPanel(m_dragShape);
-}
-
-// ===== 圆弧 Handle 拖拽 =====
-void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
-{
-	if (!m_dragShape) return;
-
-	double cx = m_dragShape->cx, cy = m_dragShape->cy;
-
-	// 旋转
-	if (m_isRotating) {
-		double newMidAng = ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy, scenePos.x()-cx)));
-		double delta = newMidAng - m_dragStartAngle;
-		if (delta > 180.0) delta -= 360.0;
-		if (delta < -180.0) delta += 360.0;
-		m_dragShape->startAngle += delta;
-		m_dragStartAngle = newMidAng;
-		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-		syncParamPanel(m_dragShape);
-		return;
-	}
-
-	if (m_dragHandleIndex < 0 || m_dragHandleIndex >= 6) return;
-
-	if(m_dragHandleIndex==0||m_dragHandleIndex==1||m_dragHandleIndex==4||m_dragHandleIndex==5){
-		double na=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy,scenePos.x()-cx)));
-		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->startAngle=na;else m_dragShape->endAngle=na;
-		double sa=m_dragShape->startAngle,ea=m_dragShape->endAngle;bool cw=(m_dragShape->span<0);
-		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->span=cw?(sf-360.0):sf;
-		// 归一化未拖拽的那一端，避免残留 >360 的值导致后续计算异常
-		if(m_dragHandleIndex==0||m_dragHandleIndex==4)
-			m_dragShape->endAngle=ShapeGeometry::normAngle360(m_dragShape->endAngle);
-		else
-			m_dragShape->startAngle=ShapeGeometry::normAngle360(m_dragShape->startAngle);
-	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->r=std::max(nr,1.5);
-	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->r2=std::max(nr,1.5);}
-	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-	syncParamPanel(m_dragShape);
-}
-
-// ===== 椭圆 Handle 拖拽 =====
-void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
-{
-	if (!m_dragShape || m_dragHandleIndex < 0 || m_dragHandleIndex >= 4) return;
-
-	if (m_isRotating)
-	{
-		// 旋转手柄 → 计算角度
-		double cx = m_dragShape->cx;
-		double cy = m_dragShape->cy;
-		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
-		m_dragShape->angle = angle;
-		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
-		syncParamPanel(m_dragShape);
-		return;
-	}
-
-	// 普通控制点拖拽：先转回局部坐标系
-	double angle = m_dragShape->angle;
-	double rad   = -qDegreesToRadians(angle);
-	double dx    = scenePos.x() - m_dragStartRect.cx;
-	double dy    = scenePos.y() - m_dragStartRect.cy;
-	double lx    = dx * qCos(rad) - dy * qSin(rad);
-	double ly    = dx * qSin(rad) + dy * qCos(rad);
-
-	double newR1 = m_dragStartRect.w / 2.0;
-	double newR2 = m_dragStartRect.h / 2.0;
-
-	switch (m_dragHandleIndex)
-	{
-	case 0: newR1 =  lx; break;  // 右
-	case 1: newR2 = -ly; break;  // 上
-	case 2: newR1 = -lx; break;  // 左
-	case 3: newR2 =  ly; break;  // 下
-	}
-	newR1 = std::max(newR1, 1.5);
-	newR2 = std::max(newR2, 1.5);
-
-	m_dragShape->cx = m_dragStartRect.cx;
-	m_dragShape->cy = m_dragStartRect.cy;
-	m_dragShape->r = newR1;
-	m_dragShape->r2 = newR2;
-
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);
 }

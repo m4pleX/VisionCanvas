@@ -196,12 +196,8 @@ private:
 
 	QGraphicsEllipseItem* handleAt(const QPointF& scenePos) const;
 
-	void updateRectFromHandle(const QPointF& scenePos);
-	void updateRotatedRectFromHandle(const QPointF& scenePos);
-	void updateCircleFromHandle(const QPointF& scenePos);
-	void updateEllipseFromHandle(const QPointF& scenePos);
-	void updateRingFromHandle(const QPointF& scenePos);
-	void updateArcFromHandle(const QPointF& scenePos);
-	void updatePolygonFromHandle(const QPointF& scenePos);
+	/*  拖拽编辑后统一刷新控制点位置与参数面板（等价于原 update*FromHandle 末尾副作用） */
+	void refreshActiveShape();
+
 	void applyShapeHover(bool hover);
 };

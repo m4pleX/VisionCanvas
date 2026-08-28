@@ -26,6 +26,8 @@ add_executable(VisionCanvas
         ScaleConfig.h
         ShapeGeometry.cpp
         ShapeGeometry.h
+        ShapeEditor.cpp
+        ShapeEditor.h
         ShapeHandleHelper.cpp
         ShapeHandleHelper.h
         ShapePainter.cpp
