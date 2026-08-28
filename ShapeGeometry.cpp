@@ -53,64 +53,64 @@ bool ShapeGeometry::contains(const DrawShapeItem* shape, const QPointF& scenePos
 	{
 	case Shape_Rect:
 	{
-		double left   = shape->rect.cx - shape->rect.w / 2.0;
-		double right  = shape->rect.cx + shape->rect.w / 2.0;
-		double top    = shape->rect.cy - shape->rect.h / 2.0;
-		double bottom = shape->rect.cy + shape->rect.h / 2.0;
+		double left   = shape->cx - shape->w / 2.0;
+		double right  = shape->cx + shape->w / 2.0;
+		double top    = shape->cy - shape->h / 2.0;
+		double bottom = shape->cy + shape->h / 2.0;
 		return scenePos.x() >= left && scenePos.x() <= right && scenePos.y() >= top && scenePos.y() <= bottom;
 	}
 	case Shape_RotateRect:
 	{
-		double rad = -qDegreesToRadians(shape->rotatedRect.angle);
-		double dx  = scenePos.x() - shape->rotatedRect.cx;
-		double dy  = scenePos.y() - shape->rotatedRect.cy;
+		double rad = -qDegreesToRadians(shape->angle);
+		double dx  = scenePos.x() - shape->cx;
+		double dy  = scenePos.y() - shape->cy;
 		double lx  = dx * qCos(rad) - dy * qSin(rad);
 		double ly  = dx * qSin(rad) + dy * qCos(rad);
-		double hw  = shape->rotatedRect.w / 2.0;
-		double hh  = shape->rotatedRect.h / 2.0;
+		double hw  = shape->w / 2.0;
+		double hh  = shape->h / 2.0;
 		return lx >= -hw && lx <= hw && ly >= -hh && ly <= hh;
 	}
 	case Shape_Circle:
 	{
-		double d2 = (scenePos.x() - shape->circle.cx) * (scenePos.x() - shape->circle.cx)
-		          + (scenePos.y() - shape->circle.cy) * (scenePos.y() - shape->circle.cy);
-		return d2 <= shape->circle.r * shape->circle.r;
+		double d2 = (scenePos.x() - shape->cx) * (scenePos.x() - shape->cx)
+		          + (scenePos.y() - shape->cy) * (scenePos.y() - shape->cy);
+		return d2 <= shape->r * shape->r;
 	}
 	case Shape_Ellipse:
 	{
-		double rad = -qDegreesToRadians(shape->ellipse.angle);
-		double dx  = scenePos.x() - shape->ellipse.cx;
-		double dy  = scenePos.y() - shape->ellipse.cy;
+		double rad = -qDegreesToRadians(shape->angle);
+		double dx  = scenePos.x() - shape->cx;
+		double dy  = scenePos.y() - shape->cy;
 		double lx  = dx * qCos(rad) - dy * qSin(rad);
 		double ly  = dx * qSin(rad) + dy * qCos(rad);
-		double r1  = shape->ellipse.r1;
-		double r2  = shape->ellipse.r2;
+		double r1  = shape->r;
+		double r2  = shape->r2;
 		return (lx * lx) / (r1 * r1) + (ly * ly) / (r2 * r2) <= 1.0;
 	}
 	case Shape_Ring:
 	{
-		double d2 = (scenePos.x() - shape->ring.cx) * (scenePos.x() - shape->ring.cx)
-		          + (scenePos.y() - shape->ring.cy) * (scenePos.y() - shape->ring.cy);
-		double rLarger  = std::max(shape->ring.r1, shape->ring.r2);
-		double rSmaller = std::min(shape->ring.r1, shape->ring.r2);
+		double d2 = (scenePos.x() - shape->cx) * (scenePos.x() - shape->cx)
+		          + (scenePos.y() - shape->cy) * (scenePos.y() - shape->cy);
+		double rLarger  = std::max(shape->r, shape->r2);
+		double rSmaller = std::min(shape->r, shape->r2);
 		return d2 <= rLarger * rLarger && d2 >= rSmaller * rSmaller;
 	}
 	case Shape_Arc:
 	{
-		double cx = shape->arc.cx, cy = shape->arc.cy;
-		double rBig = std::max(shape->arc.rOuter, shape->arc.rInner);
-		double rSml = std::min(shape->arc.rOuter, shape->arc.rInner);
+		double cx = shape->cx, cy = shape->cy;
+		double rBig = std::max(shape->r, shape->r2);
+		double rSml = std::min(shape->r, shape->r2);
 		double dx = scenePos.x() - cx, dy = scenePos.y() - cy, d = std::sqrt(dx * dx + dy * dy);
 		if (d > rBig + 8.0 || d < rSml - 8.0) return false;
 		double ang = normAngle360(qRadiansToDegrees(std::atan2(dy, dx)));
-		double sa = normAngle360(shape->arc.startAngle), span = shape->arc.span;
+		double sa = normAngle360(shape->startAngle), span = shape->span;
 		double rel = ang - sa; if (rel < 0) rel += 360.0;
 		if (span >= 0) return rel <= span;
 		return rel >= 360.0 + span;  // 顺时针弧：检测"非缺口"范围
 	}
 	case Shape_Polygon:
 	{
-		QPolygonF poly; for (auto& pt : shape->polygon.pts) poly << pt;
+		QPolygonF poly; for (auto& pt : shape->pts) poly << pt;
 		return poly.containsPoint(scenePos, Qt::OddEvenFill);
 	}
 	default: return false;
@@ -127,30 +127,30 @@ QPolygonF ShapeGeometry::toPoints(const DrawShapeItem& shape, int nLineInterp)
 	{
 	case Shape_Rect:
 	{
-		double hw = shape.rect.w / 2.0, hh = shape.rect.h / 2.0;
-		pts << QPointF(shape.rect.cx - hw, shape.rect.cy - hh)
-		    << QPointF(shape.rect.cx + hw, shape.rect.cy - hh)
-		    << QPointF(shape.rect.cx + hw, shape.rect.cy + hh)
-		    << QPointF(shape.rect.cx - hw, shape.rect.cy + hh);
+		double hw = shape.w / 2.0, hh = shape.h / 2.0;
+		pts << QPointF(shape.cx - hw, shape.cy - hh)
+		    << QPointF(shape.cx + hw, shape.cy - hh)
+		    << QPointF(shape.cx + hw, shape.cy + hh)
+		    << QPointF(shape.cx - hw, shape.cy + hh);
 		break;
 	}
 	case Shape_RotateRect:
 	{
-		double hw = shape.rotatedRect.w / 2.0, hh = shape.rotatedRect.h / 2.0;
-		double rad = qDegreesToRadians(shape.rotatedRect.angle);
+		double hw = shape.w / 2.0, hh = shape.h / 2.0;
+		double rad = qDegreesToRadians(shape.angle);
 		QPointF local[4] = { {-hw,-hh}, {hw,-hh}, {hw,hh}, {-hw,hh} };
 		for (auto& p : local)
 		{
 			double lx = p.x(), ly = p.y();
 			double rx = lx * qCos(rad) - ly * qSin(rad);
 			double ry = lx * qSin(rad) + ly * qCos(rad);
-			pts << QPointF(rx + shape.rotatedRect.cx, ry + shape.rotatedRect.cy);
+			pts << QPointF(rx + shape.cx, ry + shape.cy);
 		}
 		break;
 	}
 	case Shape_Circle:
 	{
-		double cx = shape.circle.cx, cy = shape.circle.cy, r = shape.circle.r;
+		double cx = shape.cx, cy = shape.cy, r = shape.r;
 		for (int i = 0; i < n; ++i)
 		{
 			double a = 2.0 * M_PI * i / n;
@@ -160,8 +160,8 @@ QPolygonF ShapeGeometry::toPoints(const DrawShapeItem& shape, int nLineInterp)
 	}
 	case Shape_Ellipse:
 	{
-		double cx = shape.ellipse.cx, cy = shape.ellipse.cy, r1 = shape.ellipse.r1, r2 = shape.ellipse.r2;
-		double rad = qDegreesToRadians(shape.ellipse.angle);
+		double cx = shape.cx, cy = shape.cy, r1 = shape.r, r2 = shape.r2;
+		double rad = qDegreesToRadians(shape.angle);
 		for (int i = 0; i < n; ++i)
 		{
 			double a = 2.0 * M_PI * i / n;
@@ -173,8 +173,8 @@ QPolygonF ShapeGeometry::toPoints(const DrawShapeItem& shape, int nLineInterp)
 	case Shape_Ring:
 	{
 		// 圆环近似为外圆点集 + 内圆反向点集，形成环形带
-		double cx = shape.ring.cx, cy = shape.ring.cy;
-		double rL = std::max(shape.ring.r1, shape.ring.r2), rS = std::min(shape.ring.r1, shape.ring.r2);
+		double cx = shape.cx, cy = shape.cy;
+		double rL = std::max(shape.r, shape.r2), rS = std::min(shape.r, shape.r2);
 		for (int i = 0; i < n; ++i)
 		{
 			double a = 2.0 * M_PI * i / n;
@@ -189,9 +189,9 @@ QPolygonF ShapeGeometry::toPoints(const DrawShapeItem& shape, int nLineInterp)
 	}
 	case Shape_Arc:
 	{
-		double cx = shape.arc.cx, cy = shape.arc.cy;
-		double rO = shape.arc.rOuter, rI = shape.arc.rInner;
-		double saR = qDegreesToRadians(shape.arc.startAngle), spR = qDegreesToRadians(shape.arc.span);
+		double cx = shape.cx, cy = shape.cy;
+		double rO = shape.r, rI = shape.r2;
+		double saR = qDegreesToRadians(shape.startAngle), spR = qDegreesToRadians(shape.span);
 		for (int i = 0; i <= n; ++i)
 		{
 			double a = saR + spR * i / n;
@@ -205,7 +205,7 @@ QPolygonF ShapeGeometry::toPoints(const DrawShapeItem& shape, int nLineInterp)
 		break;
 	}
 	case Shape_Polygon:
-		pts = shape.polygon.pts;
+		pts = shape.pts;
 		break;
 	default:
 		break;
@@ -220,8 +220,8 @@ QPainterPath ShapeGeometry::toPolygonPath(const DrawShapeItem& shape, int nLineI
 	{
 	case Shape_Rect:
 	{
-		double hw = shape.rect.w / 2.0, hh = shape.rect.h / 2.0;
-		path.addRect(QRectF(shape.rect.cx - hw, shape.rect.cy - hh, shape.rect.w, shape.rect.h));
+		double hw = shape.w / 2.0, hh = shape.h / 2.0;
+		path.addRect(QRectF(shape.cx - hw, shape.cy - hh, shape.w, shape.h));
 		break;
 	}
 	case Shape_RotateRect:
@@ -232,7 +232,7 @@ QPainterPath ShapeGeometry::toPolygonPath(const DrawShapeItem& shape, int nLineI
 		break;
 	}
 	case Shape_Circle:
-		path.addEllipse(QPointF(shape.circle.cx, shape.circle.cy), shape.circle.r, shape.circle.r);
+		path.addEllipse(QPointF(shape.cx, shape.cy), shape.r, shape.r);
 		break;
 	case Shape_Ellipse:
 	{
@@ -244,17 +244,17 @@ QPainterPath ShapeGeometry::toPolygonPath(const DrawShapeItem& shape, int nLineI
 	}
 	case Shape_Ring:
 	{
-		double rL = std::max(shape.ring.r1, shape.ring.r2), rS = std::min(shape.ring.r1, shape.ring.r2);
-		QPainterPath o; o.addEllipse(QPointF(shape.ring.cx, shape.ring.cy), rL, rL);
-		QPainterPath i; i.addEllipse(QPointF(shape.ring.cx, shape.ring.cy), rS, rS);
+		double rL = std::max(shape.r, shape.r2), rS = std::min(shape.r, shape.r2);
+		QPainterPath o; o.addEllipse(QPointF(shape.cx, shape.cy), rL, rL);
+		QPainterPath i; i.addEllipse(QPointF(shape.cx, shape.cy), rS, rS);
 		path = o.subtracted(i);
 		break;
 	}
 	case Shape_Arc:
 	{
-		double cx = shape.arc.cx, cy = shape.arc.cy;
-		double rO = shape.arc.rOuter, rI = shape.arc.rInner;
-		double saR = qDegreesToRadians(shape.arc.startAngle), spR = qDegreesToRadians(shape.arc.span);
+		double cx = shape.cx, cy = shape.cy;
+		double rO = shape.r, rI = shape.r2;
+		double saR = qDegreesToRadians(shape.startAngle), spR = qDegreesToRadians(shape.span);
 		const int n = std::max(4, nLineInterp);
 		path.moveTo(cx + rO * qCos(saR), cy + rO * qSin(saR));
 		for (int i = 1; i <= n; ++i) { double a = saR + spR * i / n; path.lineTo(cx + rO * qCos(a), cy + rO * qSin(a)); }
@@ -265,7 +265,7 @@ QPainterPath ShapeGeometry::toPolygonPath(const DrawShapeItem& shape, int nLineI
 	}
 	case Shape_Polygon:
 	{
-		QPolygonF poly = shape.polygon.pts;
+		QPolygonF poly = shape.pts;
 		path.addPolygon(poly);
 		path.closeSubpath();
 		break;
@@ -282,19 +282,19 @@ QRectF ShapeGeometry::boundingRect(const DrawShapeItem& shape)
 	{
 	case Shape_Rect:
 	{
-		double hw = shape.rect.w / 2.0, hh = shape.rect.h / 2.0;
-		return QRectF(shape.rect.cx - hw, shape.rect.cy - hh, shape.rect.w, shape.rect.h);
+		double hw = shape.w / 2.0, hh = shape.h / 2.0;
+		return QRectF(shape.cx - hw, shape.cy - hh, shape.w, shape.h);
 	}
 	case Shape_RotateRect:
 	case Shape_Ellipse:
 		return toPoints(shape).boundingRect();
 	case Shape_Circle:
-		return QRectF(shape.circle.cx - shape.circle.r, shape.circle.cy - shape.circle.r,
-		              shape.circle.r * 2, shape.circle.r * 2);
+		return QRectF(shape.cx - shape.r, shape.cy - shape.r,
+		              shape.r * 2, shape.r * 2);
 	case Shape_Ring:
 	{
-		double r = std::max(shape.ring.r1, shape.ring.r2);
-		return QRectF(shape.ring.cx - r, shape.ring.cy - r, r * 2, r * 2);
+		double r = std::max(shape.r, shape.r2);
+		return QRectF(shape.cx - r, shape.cy - r, r * 2, r * 2);
 	}
 	case Shape_Arc:
 		return toPoints(shape).boundingRect();

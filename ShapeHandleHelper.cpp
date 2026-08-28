@@ -89,12 +89,12 @@ void ShapeHandleHelper::rebuildHandles(const DrawShapeItem& shape, ShapeHandleSe
 	int kind = 0; // 0=rect,1=rotRect,2=circle,3=ellipse,4=ring,5=arc,6=poly
 
 	switch (shape.type) {
-	case Shape_Rect:         cx = shape.rect.cx; cy = shape.rect.cy; hW = shape.rect.w / 2; hH = shape.rect.h / 2; break;
-	case Shape_RotateRect:   cx = shape.rotatedRect.cx; cy = shape.rotatedRect.cy; hW = shape.rotatedRect.w / 2; hH = shape.rotatedRect.h / 2; angle = shape.rotatedRect.angle; kind = 1; break;
-	case Shape_Circle:       cx = shape.circle.cx; cy = shape.circle.cy; hW = shape.circle.r; hH = shape.circle.r; kind = 2; break;
-	case Shape_Ellipse:      cx = shape.ellipse.cx; cy = shape.ellipse.cy; hW = shape.ellipse.r1; hH = shape.ellipse.r2; angle = shape.ellipse.angle; kind = 3; break;
-	case Shape_Ring:         cx = shape.ring.cx; cy = shape.ring.cy; kind = 4; break;
-	case Shape_Arc:          cx = shape.arc.cx; cy = shape.arc.cy; kind = 5; break;
+	case Shape_Rect:         cx = shape.cx; cy = shape.cy; hW = shape.w / 2; hH = shape.h / 2; break;
+	case Shape_RotateRect:   cx = shape.cx; cy = shape.cy; hW = shape.w / 2; hH = shape.h / 2; angle = shape.angle; kind = 1; break;
+	case Shape_Circle:       cx = shape.cx; cy = shape.cy; hW = shape.r; hH = shape.r; kind = 2; break;
+	case Shape_Ellipse:      cx = shape.cx; cy = shape.cy; hW = shape.r; hH = shape.r2; angle = shape.angle; kind = 3; break;
+	case Shape_Ring:         cx = shape.cx; cy = shape.cy; kind = 4; break;
+	case Shape_Arc:          cx = shape.cx; cy = shape.cy; kind = 5; break;
 	case Shape_Polygon:      kind = 6; break;
 	}
 	if (kind != 4 && kind != 5 && kind != 6 && hW <= 0 && hH <= 0) return;
@@ -102,17 +102,17 @@ void ShapeHandleHelper::rebuildHandles(const DrawShapeItem& shape, ShapeHandleSe
 	if (kind == 2) { // Circle
 		QPointF pts[4] = { {hW,0},{0,-hH},{-hW,0},{0,hH} };
 		for (int i = 0; i < 4; ++i) addH(hs.handles, m_scene, pts[i] + QPointF(cx, cy), QColor(0, 180, 255), i, 0);
-		addCirc(hs, m_scene, cx, cy, shape.circle.r, shape.circle.r);
+		addCirc(hs, m_scene, cx, cy, shape.r, shape.r);
 	} else if (kind == 4) { // Ring
-		double rL = std::max(shape.ring.r1, shape.ring.r2), rS = std::min(shape.ring.r1, shape.ring.r2);
+		double rL = std::max(shape.r, shape.r2), rS = std::min(shape.r, shape.r2);
 		QPointF oP[4] = { {rL,0},{0,-rL},{-rL,0},{0,rL} };
 		for (int i = 0; i < 4; ++i) addH(hs.handles, m_scene, oP[i] + QPointF(cx, cy), QColor(0, 180, 255), i, 0);
 		QPointF iP[4] = { {rS,0},{0,-rS},{-rS,0},{0,rS} };
 		for (int i = 0; i < 4; ++i) addH(hs.handles, m_scene, iP[i] + QPointF(cx, cy), QColor(255, 140, 0), i + 4, 0);
 		addCirc(hs, m_scene, cx, cy, rL, rL);
 	} else if (kind == 5) { // Arc
-		double rO = shape.arc.rOuter, rI = shape.arc.rInner;
-		double sa = shape.arc.startAngle, sp = shape.arc.span;
+		double rO = shape.r, rI = shape.r2;
+		double sa = shape.startAngle, sp = shape.span;
 		double saR = qDegreesToRadians(sa), eaR = qDegreesToRadians(sa + sp);
 		double midA = sa + sp / 2, midR = qDegreesToRadians(midA);
 		QPointF oPts[3] = { {cx + rO * qCos(saR), cy + rO * qSin(saR)}, {cx + rO * qCos(eaR), cy + rO * qSin(eaR)}, {cx + rO * qCos(midR), cy + rO * qSin(midR)} };
@@ -125,8 +125,8 @@ void ShapeHandleHelper::rebuildHandles(const DrawShapeItem& shape, ShapeHandleSe
 		addRot(hs, m_scene, QPointF(cx + rRot * qCos(midR), cy + rRot * qSin(midR)),
 			QPointF(cx + (rRot + 30) * qCos(midR), cy + (rRot + 30) * qSin(midR)));
 	} else if (kind == 6) { // Polygon
-		for (int i = 0; i < shape.polygon.pts.size(); ++i)
-			addH(hs.handles, m_scene, shape.polygon.pts[i], QColor(0, 180, 255), i, 0);
+		for (int i = 0; i < shape.pts.size(); ++i)
+			addH(hs.handles, m_scene, shape.pts[i], QColor(0, 180, 255), i, 0);
 	} else if (kind == 3) { // Ellipse
 		double rad = qDegreesToRadians(angle);
 		QPointF lP[4] = { {hW,0},{0,-hH},{-hW,0},{0,hH} };
@@ -163,16 +163,16 @@ void ShapeHandleHelper::rebuildHandles(const DrawShapeItem& shape, ShapeHandleSe
 void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleSet& hs, QGraphicsItem* shapeItem) {
 	switch (shape.type) {
 	case Shape_Rect: {
-		double cx = shape.rect.cx, cy = shape.rect.cy, hw = shape.rect.w / 2, hh = shape.rect.h / 2;
+		double cx = shape.cx, cy = shape.cy, hw = shape.w / 2, hh = shape.h / 2;
 		QPointF lP[8] = { {-hw,-hh},{0,-hh},{hw,-hh},{hw,0},{hw,hh},{0,hh},{-hw,hh},{-hw,0} };
 		for (int i = 0; i < hs.handles.size() && i < 8; ++i) moveHandle(hs.handles[i], lP[i] + QPointF(cx, cy));
-		if (auto* r = dynamic_cast<QGraphicsRectItem*>(shapeItem)) r->setRect(cx - hw, cy - hh, shape.rect.w, shape.rect.h);
+		if (auto* r = dynamic_cast<QGraphicsRectItem*>(shapeItem)) r->setRect(cx - hw, cy - hh, shape.w, shape.h);
 		hs.centerCrossH->setLine(cx - kCrossLen, cy, cx + kCrossLen, cy);
 		hs.centerCrossV->setLine(cx, cy - kCrossLen, cx, cy + kCrossLen);
 		break;
 	}
 	case Shape_Circle: {
-		double cx = shape.circle.cx, cy = shape.circle.cy, r = shape.circle.r;
+		double cx = shape.cx, cy = shape.cy, r = shape.r;
 		QPointF pts[4] = { {r,0},{0,-r},{-r,0},{0,r} };
 		for (int i = 0; i < 4 && i < hs.handles.size(); ++i) moveHandle(hs.handles[i], pts[i] + QPointF(cx, cy));
 		if (auto* e = dynamic_cast<QGraphicsEllipseItem*>(shapeItem)) e->setRect(cx - r, cy - r, r * 2, r * 2);
@@ -182,8 +182,8 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 		break;
 	}
 	case Shape_Ring: {
-		double cx = shape.ring.cx, cy = shape.ring.cy;
-		double rL = std::max(shape.ring.r1, shape.ring.r2), rS = std::min(shape.ring.r1, shape.ring.r2);
+		double cx = shape.cx, cy = shape.cy;
+		double rL = std::max(shape.r, shape.r2), rS = std::min(shape.r, shape.r2);
 		QPointF oP[4] = { {rL,0},{0,-rL},{-rL,0},{0,rL} };
 		for (int i = 0; i < 4 && i < hs.handles.size(); ++i) moveHandle(hs.handles[i], oP[i] + QPointF(cx, cy));
 		QPointF iP[4] = { {rS,0},{0,-rS},{-rS,0},{0,rS} };
@@ -198,8 +198,8 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 		break;
 	}
 	case Shape_Arc: {
-		double cx = shape.arc.cx, cy = shape.arc.cy, rO = shape.arc.rOuter, rI = shape.arc.rInner;
-		double sa = shape.arc.startAngle, sp = shape.arc.span, saR = qDegreesToRadians(sa), spR = qDegreesToRadians(sp);
+		double cx = shape.cx, cy = shape.cy, rO = shape.r, rI = shape.r2;
+		double sa = shape.startAngle, sp = shape.span, saR = qDegreesToRadians(sa), spR = qDegreesToRadians(sp);
 		double eR = saR + spR, midA = sa + sp / 2, midR = qDegreesToRadians(midA);
 		if (0 < hs.handles.size()) moveHandle(hs.handles[0], QPointF(cx + rO * qCos(saR), cy + rO * qSin(saR)));
 		if (1 < hs.handles.size()) moveHandle(hs.handles[1], QPointF(cx + rO * qCos(eR), cy + rO * qSin(eR)));
@@ -226,7 +226,7 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 		break;
 	}
 	case Shape_Polygon: {
-		auto& pts = shape.polygon.pts;
+		auto& pts = shape.pts;
 		for (int i = 0; i < pts.size() && i < hs.handles.size(); ++i) moveHandle(hs.handles[i], pts[i]);
 		if (auto* p = dynamic_cast<QGraphicsPolygonItem*>(shapeItem)) { QPolygonF poly; for (auto& pt : pts) poly << pt; p->setPolygon(poly); }
 		if (hs.centerCrossH && hs.centerCrossV) {
@@ -238,8 +238,8 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 		break;
 	}
 	case Shape_RotateRect: {
-		double cx = shape.rotatedRect.cx, cy = shape.rotatedRect.cy, hw = shape.rotatedRect.w / 2, hh = shape.rotatedRect.h / 2;
-		double rad = qDegreesToRadians(shape.rotatedRect.angle);
+		double cx = shape.cx, cy = shape.cy, hw = shape.w / 2, hh = shape.h / 2;
+		double rad = qDegreesToRadians(shape.angle);
 		QPointF lP[8] = { {-hw,-hh},{0,-hh},{hw,-hh},{hw,0},{hw,hh},{0,hh},{-hw,hh},{-hw,0} };
 		for (int i = 0; i < 8 && i < hs.handles.size(); ++i) {
 			double rx = lP[i].x() * qCos(rad) - lP[i].y() * qSin(rad);
@@ -261,8 +261,8 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 		break;
 	}
 	case Shape_Ellipse: {
-		double cx = shape.ellipse.cx, cy = shape.ellipse.cy, r1 = shape.ellipse.r1, r2 = shape.ellipse.r2;
-		double rad = qDegreesToRadians(shape.ellipse.angle);
+		double cx = shape.cx, cy = shape.cy, r1 = shape.r, r2 = shape.r2;
+		double rad = qDegreesToRadians(shape.angle);
 		QPointF lP[4] = { {r1,0},{0,-r2},{-r1,0},{0,r2} };
 		for (int i = 0; i < 4 && i < hs.handles.size(); ++i) {
 			double rx = lP[i].x() * qCos(rad) - lP[i].y() * qSin(rad);
@@ -271,7 +271,7 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 		}
 		if (auto* p = dynamic_cast<QGraphicsPathItem*>(shapeItem)) {
 			QPainterPath path; path.addEllipse(QPointF(0, 0), r1, r2);
-			QTransform t; t.translate(cx, cy); t.rotate(shape.ellipse.angle); p->setPath(t.map(path));
+			QTransform t; t.translate(cx, cy); t.rotate(shape.angle); p->setPath(t.map(path));
 		}
 		if (hs.circumRect) {
 			double hw = std::sqrt(r1*r1 * qCos(rad)*qCos(rad) + r2*r2 * qSin(rad)*qSin(rad));

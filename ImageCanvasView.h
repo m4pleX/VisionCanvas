@@ -159,7 +159,7 @@ private:
 	DrawShapeItem*      m_dragShape       = nullptr;
 	int                 m_dragHandleIndex = -1;
 	double              m_dragStartAngle  = 0;
-	DrawShapeItem::Rect m_dragStartRect;
+	ShapeDragRect       m_dragStartRect;
 	QPointF             m_dragOffset;
 	QPointF             m_dragStartCenter;
 

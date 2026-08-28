@@ -719,44 +719,44 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			{
 				if (m_activeShape->type == Shape_Rect)
 				{
-					m_activeShape->rect.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->rect.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				else if (m_activeShape->type == Shape_RotateRect)
 				{
-					m_activeShape->rotatedRect.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->rotatedRect.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				else if (m_activeShape->type == Shape_Circle)
 				{
-					m_activeShape->circle.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->circle.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				else if (m_activeShape->type == Shape_Ellipse)
 				{
-					m_activeShape->ellipse.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->ellipse.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				else if (m_activeShape->type == Shape_Ring)
 				{
-					m_activeShape->ring.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->ring.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				else if (m_activeShape->type == Shape_Arc)
 				{
-					m_activeShape->arc.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->arc.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				else if (m_activeShape->type == Shape_Polygon)
 				{
-					double dx = scenePos.x() - m_dragOffset.x() - m_activeShape->polygon.pts[0].x();
-					double dy = scenePos.y() - m_dragOffset.y() - m_activeShape->polygon.pts[0].y();
-					for(auto& pt:m_activeShape->polygon.pts){pt.rx()+=dx;pt.ry()+=dy;}
+					double dx = scenePos.x() - m_dragOffset.x() - m_activeShape->pts[0].x();
+					double dy = scenePos.y() - m_dragOffset.y() - m_activeShape->pts[0].y();
+					for(auto& pt:m_activeShape->pts){pt.rx()+=dx;pt.ry()+=dy;}
 				}
 				else
 				{
-					m_activeShape->rect.cx = scenePos.x() - m_dragOffset.x();
-					m_activeShape->rect.cy = scenePos.y() - m_dragOffset.y();
+					m_activeShape->cx = scenePos.x() - m_dragOffset.x();
+					m_activeShape->cy = scenePos.y() - m_dragOffset.y();
 				}
 				syncParamPanel(m_activeShape);
 				m_handleHelper->updatePositions(*m_activeShape, *m_activeHandleSet, m_shapeItem);
@@ -796,9 +796,9 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						m_dragShape = m_activeShape;
 						m_dragHandleIndex = hIdx;
 						if (m_activeShape->type == Shape_Arc)
-							m_dragStartAngle = ShapeGeometry::normAngle360(m_activeShape->arc.startAngle + m_activeShape->arc.span / 2.0);
+							m_dragStartAngle = ShapeGeometry::normAngle360(m_activeShape->startAngle + m_activeShape->span / 2.0);
 						else
-							m_dragStartAngle = m_activeShape->rotatedRect.angle;
+							m_dragStartAngle = m_activeShape->angle;
 						ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
 						event->accept();
 						return true;
@@ -810,32 +810,33 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					m_dragHandleIndex = hIdx;
 					if (m_activeShape->type == Shape_RotateRect)
 					{
-						m_dragStartRect = { m_activeShape->rotatedRect.cx, m_activeShape->rotatedRect.cy,
-						                    m_activeShape->rotatedRect.w, m_activeShape->rotatedRect.h };
-						m_dragStartAngle = m_activeShape->rotatedRect.angle;
+						m_dragStartRect = { m_activeShape->cx, m_activeShape->cy,
+						                    m_activeShape->w, m_activeShape->h };
+						m_dragStartAngle = m_activeShape->angle;
 					}
 					else if (m_activeShape->type == Shape_Circle)
-						m_dragStartRect = { m_activeShape->circle.cx, m_activeShape->circle.cy,
-						                    m_activeShape->circle.r * 2, m_activeShape->circle.r * 2 };
+						m_dragStartRect = { m_activeShape->cx, m_activeShape->cy,
+						                    m_activeShape->r * 2, m_activeShape->r * 2 };
 					else if (m_activeShape->type == Shape_Ellipse)
-						m_dragStartRect = { m_activeShape->ellipse.cx, m_activeShape->ellipse.cy,
-						                    m_activeShape->ellipse.r1 * 2, m_activeShape->ellipse.r2 * 2 };
+						m_dragStartRect = { m_activeShape->cx, m_activeShape->cy,
+						                    m_activeShape->r * 2, m_activeShape->r2 * 2 };
 				else if (m_activeShape->type == Shape_Ring)
 				{
-					m_dragStartRect = { m_activeShape->ring.cx, m_activeShape->ring.cy,
-					                    m_activeShape->ring.r1 * 2, m_activeShape->ring.r2 * 2 };
+					m_dragStartRect = { m_activeShape->cx, m_activeShape->cy,
+					                    m_activeShape->r * 2, m_activeShape->r2 * 2 };
 				}
 				else if (m_activeShape->type == Shape_Arc)
 				{
-					m_dragStartRect = { m_activeShape->arc.cx, m_activeShape->arc.cy,
-					                    m_activeShape->arc.startAngle, m_activeShape->arc.endAngle };
+					m_dragStartRect = { m_activeShape->cx, m_activeShape->cy,
+					                    m_activeShape->startAngle, m_activeShape->endAngle };
 				}
 				else if (m_activeShape->type == Shape_Polygon)
 				{
 					m_dragStartRect = { 0,0,0,0 };
 				}
 				else
-					m_dragStartRect = m_activeShape->rect;
+					m_dragStartRect = { m_activeShape->cx, m_activeShape->cy,
+					                    m_activeShape->w, m_activeShape->h };
 				ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
 						event->accept();
 						return true;
@@ -847,26 +848,26 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 			{
 			m_isDraggingShape = true;
 			if (m_activeShape->type == Shape_RotateRect)
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->rotatedRect.cx,
-				                       scenePos.y() - m_activeShape->rotatedRect.cy);
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->cx,
+				                       scenePos.y() - m_activeShape->cy);
 			else if (m_activeShape->type == Shape_Circle)
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->circle.cx,
-				                       scenePos.y() - m_activeShape->circle.cy);
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->cx,
+				                       scenePos.y() - m_activeShape->cy);
 			else if (m_activeShape->type == Shape_Ellipse)
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->ellipse.cx,
-				                       scenePos.y() - m_activeShape->ellipse.cy);
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->cx,
+				                       scenePos.y() - m_activeShape->cy);
 			else if (m_activeShape->type == Shape_Ring)
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->ring.cx,
-				                       scenePos.y() - m_activeShape->ring.cy);
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->cx,
+				                       scenePos.y() - m_activeShape->cy);
 			else if (m_activeShape->type == Shape_Arc)
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->arc.cx,
-				                       scenePos.y() - m_activeShape->arc.cy);
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->cx,
+				                       scenePos.y() - m_activeShape->cy);
 			else if (m_activeShape->type == Shape_Polygon)
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->polygon.pts[0].x(),
-				                       scenePos.y() - m_activeShape->polygon.pts[0].y());
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->pts[0].x(),
+				                       scenePos.y() - m_activeShape->pts[0].y());
 			else
-				m_dragOffset = QPointF(scenePos.x() - m_activeShape->rect.cx,
-				                       scenePos.y() - m_activeShape->rect.cy);
+				m_dragOffset = QPointF(scenePos.x() - m_activeShape->cx,
+				                       scenePos.y() - m_activeShape->cy);
 				event->accept();
 				return true;
 			}
@@ -1308,48 +1309,48 @@ QList<ParamField> ImageCanvasView::buildParamFields(DrawShapeType type) const {
 	switch (type) {
 	case Shape_Rect:
 		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cx;}, [](DrawShapeItem& s,double v){s.rect.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rect.cy;}, [](DrawShapeItem& s,double v){s.rect.cy=v;}},
-			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.w;},  [](DrawShapeItem& s,double v){s.rect.w=v;}},
-			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rect.h;},  [](DrawShapeItem& s,double v){s.rect.h=v;}},
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
+			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.w;},  [](DrawShapeItem& s,double v){s.w=v;}},
+			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.h;},  [](DrawShapeItem& s,double v){s.h=v;}},
 		}; break;
 	case Shape_RotateRect:
 		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cx;}, [](DrawShapeItem& s,double v){s.rotatedRect.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.cy;}, [](DrawShapeItem& s,double v){s.rotatedRect.cy=v;}},
-			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.w;},  [](DrawShapeItem& s,double v){s.rotatedRect.w=v;}},
-			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.h;},  [](DrawShapeItem& s,double v){s.rotatedRect.h=v;}},
-			{QStringLiteral("角度"),   -999999, 999999, [](const DrawShapeItem& s){return s.rotatedRect.angle;}, [](DrawShapeItem& s,double v){s.rotatedRect.angle=v;}},
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
+			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.w;},  [](DrawShapeItem& s,double v){s.w=v;}},
+			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.h;},  [](DrawShapeItem& s,double v){s.h=v;}},
+			{QStringLiteral("角度"),   -999999, 999999, [](const DrawShapeItem& s){return s.angle;}, [](DrawShapeItem& s,double v){s.angle=v;}},
 		}; break;
 	case Shape_Circle:
 		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cx;}, [](DrawShapeItem& s,double v){s.circle.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.circle.cy;}, [](DrawShapeItem& s,double v){s.circle.cy=v;}},
-			{QStringLiteral("半径"),   -999999, 999999, [](const DrawShapeItem& s){return s.circle.r;},  [](DrawShapeItem& s,double v){s.circle.r=v;}},
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
+			{QStringLiteral("半径"),   -999999, 999999, [](const DrawShapeItem& s){return s.r;},  [](DrawShapeItem& s,double v){s.r=v;}},
 		}; break;
 	case Shape_Ellipse:
 		fields = {
-			{QStringLiteral("中心 X"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cx;}, [](DrawShapeItem& s,double v){s.ellipse.cx=v;}},
-			{QStringLiteral("中心 Y"),  -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.cy;}, [](DrawShapeItem& s,double v){s.ellipse.cy=v;}},
-			{QStringLiteral("半轴 r1"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r1;}, [](DrawShapeItem& s,double v){s.ellipse.r1=v;}},
-			{QStringLiteral("半轴 r2"), -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.r2;}, [](DrawShapeItem& s,double v){s.ellipse.r2=v;}},
-			{QStringLiteral("角度"),    -999999, 999999, [](const DrawShapeItem& s){return s.ellipse.angle;}, [](DrawShapeItem& s,double v){s.ellipse.angle=v;}},
+			{QStringLiteral("中心 X"),  -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
+			{QStringLiteral("中心 Y"),  -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
+			{QStringLiteral("半轴 r1"), -999999, 999999, [](const DrawShapeItem& s){return s.r;}, [](DrawShapeItem& s,double v){s.r=v;}},
+			{QStringLiteral("半轴 r2"), -999999, 999999, [](const DrawShapeItem& s){return s.r2;}, [](DrawShapeItem& s,double v){s.r2=v;}},
+			{QStringLiteral("角度"),    -999999, 999999, [](const DrawShapeItem& s){return s.angle;}, [](DrawShapeItem& s,double v){s.angle=v;}},
 		}; break;
 	case Shape_Ring:
 		fields = {
-			{QStringLiteral("中心 X"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cx;}, [](DrawShapeItem& s,double v){s.ring.cx=v;}},
-			{QStringLiteral("中心 Y"),   -999999, 999999, [](const DrawShapeItem& s){return s.ring.cy;}, [](DrawShapeItem& s,double v){s.ring.cy=v;}},
-			{QStringLiteral("半径 r1"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r1;}, [](DrawShapeItem& s,double v){s.ring.r1=v;}},
-			{QStringLiteral("半径 r2"),  -999999, 999999, [](const DrawShapeItem& s){return s.ring.r2;}, [](DrawShapeItem& s,double v){s.ring.r2=v;}},
+			{QStringLiteral("中心 X"),   -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
+			{QStringLiteral("中心 Y"),   -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
+			{QStringLiteral("半径 r1"),  -999999, 999999, [](const DrawShapeItem& s){return s.r;}, [](DrawShapeItem& s,double v){s.r=v;}},
+			{QStringLiteral("半径 r2"),  -999999, 999999, [](const DrawShapeItem& s){return s.r2;}, [](DrawShapeItem& s,double v){s.r2=v;}},
 		}; break;
 	case Shape_Arc:
 		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cx;},    [](DrawShapeItem& s,double v){s.arc.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.arc.cy;},    [](DrawShapeItem& s,double v){s.arc.cy=v;}},
-			{QStringLiteral("半径1"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rOuter;}, [](DrawShapeItem& s,double v){s.arc.rOuter=v;}},
-			{QStringLiteral("半径2"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rInner;}, [](DrawShapeItem& s,double v){s.arc.rInner=v;}},
-			{QStringLiteral("起始角"), 0.0, 360.0, [](const DrawShapeItem& s){return s.arc.startAngle;}, [](DrawShapeItem& s,double v){s.arc.startAngle=v;}},
-			{QStringLiteral("跨度"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.arc.span;},       [](DrawShapeItem& s,double v){s.arc.span=v;}},
+			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;},    [](DrawShapeItem& s,double v){s.cx=v;}},
+			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;},    [](DrawShapeItem& s,double v){s.cy=v;}},
+			{QStringLiteral("半径1"),  -999999, 999999, [](const DrawShapeItem& s){return s.r;}, [](DrawShapeItem& s,double v){s.r=v;}},
+			{QStringLiteral("半径2"),  -999999, 999999, [](const DrawShapeItem& s){return s.r2;}, [](DrawShapeItem& s,double v){s.r2=v;}},
+			{QStringLiteral("起始角"), 0.0, 360.0, [](const DrawShapeItem& s){return s.startAngle;}, [](DrawShapeItem& s,double v){s.startAngle=v;}},
+			{QStringLiteral("跨度"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.span;},       [](DrawShapeItem& s,double v){s.span=v;}},
 		}; break;
 	case Shape_Polygon:
 		// 动态处理
@@ -1378,10 +1379,10 @@ void ImageCanvasView::showParamPanel() {
 			if(s) {
 				QList<ParamField> fields;
 				if (s->type == Shape_Polygon) {
-					for (int i = 0; i < s->polygon.pts.size(); ++i) {
+					for (int i = 0; i < s->pts.size(); ++i) {
 						int vi = i;
-						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].x();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].rx()=v;}});
-						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].ry()=v;}});
+						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.pts[vi].x();}, [vi](DrawShapeItem& a,double v){a.pts[vi].rx()=v;}});
+						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.pts[vi].ry()=v;}});
 					}
 				} else {
 					fields = buildParamFields(s->type);
@@ -1396,14 +1397,14 @@ void ImageCanvasView::showParamPanel() {
 
 	QList<ParamField> fields;
 	if (type == Shape_Polygon && existing) {
-		for (int i = 0; i < existing->polygon.pts.size(); ++i) {
+		for (int i = 0; i < existing->pts.size(); ++i) {
 			int idx = i;
 			fields.append({QString(), -999999, 999999,
-				[idx](const DrawShapeItem& s){return s.polygon.pts[idx].x();},
-				[idx](DrawShapeItem& s,double v){s.polygon.pts[idx].rx()=v;}});
+				[idx](const DrawShapeItem& s){return s.pts[idx].x();},
+				[idx](DrawShapeItem& s,double v){s.pts[idx].rx()=v;}});
 			fields.append({QString(), -999999, 999999,
-				[idx](const DrawShapeItem& s){return s.polygon.pts[idx].y();},
-				[idx](DrawShapeItem& s,double v){s.polygon.pts[idx].ry()=v;}});
+				[idx](const DrawShapeItem& s){return s.pts[idx].y();},
+				[idx](DrawShapeItem& s,double v){s.pts[idx].ry()=v;}});
 		}
 	} else {
 		fields = buildParamFields(type);
@@ -1424,10 +1425,10 @@ void ImageCanvasView::syncParamPanel(DrawShapeItem* shape) {
 	if (!m_paramPanel || !shape) return;
 	QList<ParamField> fields;
 	if (shape->type == Shape_Polygon) {
-		for (int i = 0; i < shape->polygon.pts.size(); ++i) {
+		for (int i = 0; i < shape->pts.size(); ++i) {
 			int vi = i;
-			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].x();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].rx()=v;}});
-			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.polygon.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.polygon.pts[vi].ry()=v;}});
+			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.pts[vi].x();}, [vi](DrawShapeItem& a,double v){a.pts[vi].rx()=v;}});
+			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.pts[vi].ry()=v;}});
 		}
 	} else {
 		fields = buildParamFields(shape->type);
@@ -1444,10 +1445,10 @@ void ImageCanvasView::applyParamAndRedraw() {
 
 	QList<ParamField> fields;
 	if (type == Shape_Polygon) {
-		for (int i = 0; i < shape->polygon.pts.size(); ++i) {
+		for (int i = 0; i < shape->pts.size(); ++i) {
 			int idx = i;
-			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.polygon.pts[idx].x();}, [idx](DrawShapeItem& s,double v){s.polygon.pts[idx].rx()=v;}});
-			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.polygon.pts[idx].y();}, [idx](DrawShapeItem& s,double v){s.polygon.pts[idx].ry()=v;}});
+			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.pts[idx].x();}, [idx](DrawShapeItem& s,double v){s.pts[idx].rx()=v;}});
+			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.pts[idx].y();}, [idx](DrawShapeItem& s,double v){s.pts[idx].ry()=v;}});
 		}
 	} else {
 		fields = buildParamFields(type);
@@ -1530,7 +1531,7 @@ void ImageCanvasView::commitCircle()
 
 	DrawShapeItem* shape = findShapeByType(Shape_Circle);
 	if (!shape) { shape = new DrawShapeItem(Shape_Circle); m_shapes.append(shape); }
-	shape->circle = { cx, cy, radius };
+	shape->cx = cx; shape->cy = cy; shape->r = radius;
 
 	clearSceneShape();
 	m_activeShape = shape;
@@ -1553,7 +1554,7 @@ void ImageCanvasView::commitRing()
 
 	DrawShapeItem* shape = findShapeByType(Shape_Ring);
 	if (!shape) { shape = new DrawShapeItem(Shape_Ring); m_shapes.append(shape); }
-	shape->ring = { cx, cy, r1, r2 };
+	shape->cx = cx; shape->cy = cy; shape->r = r1; shape->r2 = r2;
 
 	clearSceneShape();
 	m_activeShape = shape;
@@ -1569,9 +1570,9 @@ void ImageCanvasView::commitArc()
 	double rOuter=std::max(r1,r2),rInner=std::min(r1,r2);
 	DrawShapeItem* shape=findShapeByType(Shape_Arc);
 	if(!shape){shape=new DrawShapeItem(Shape_Arc);m_shapes.append(shape);}
-	shape->arc.cx=cx;shape->arc.cy=cy;
-	shape->arc.rOuter=rOuter;shape->arc.rInner=rInner;
-	shape->arc.startAngle=aA;shape->arc.endAngle=aA+span;shape->arc.span=span;
+	shape->cx=cx;shape->cy=cy;
+	shape->r=rOuter;shape->r2=rInner;
+	shape->startAngle=aA;shape->endAngle=aA+span;shape->span=span;
 	clearSceneShape();m_activeShape=shape;rebuildShapeOnScene(shape);
 }
 
@@ -1581,7 +1582,7 @@ void ImageCanvasView::commitPolygon()
 	if(m_tempPolyPts.size()<3)return;
 	DrawShapeItem* shape=findShapeByType(Shape_Polygon);
 	if(!shape){shape=new DrawShapeItem(Shape_Polygon);m_shapes.append(shape);}
-	shape->polygon.pts=m_tempPolyPts;
+	shape->pts=m_tempPolyPts;
 	// 清理绘制标记
 	for(auto* mk:m_circleMarkers){m_scene->removeItem(mk);delete mk;}
 	m_circleMarkers.clear();
@@ -1609,7 +1610,7 @@ void ImageCanvasView::commitRect()
 
 	DrawShapeItem* shape = findShapeByType(Shape_Rect);
 	if (!shape) { shape = new DrawShapeItem(Shape_Rect); m_shapes.append(shape); }
-	shape->rect = { cx, cy, w, h };
+	shape->cx = cx; shape->cy = cy; shape->w = w; shape->h = h;
 
 	clearSceneShape();
 	m_activeShape = shape;
@@ -1628,7 +1629,7 @@ void ImageCanvasView::commitRotatedRect()
 
 	DrawShapeItem* shape = findShapeByType(Shape_RotateRect);
 	if (!shape) { shape = new DrawShapeItem(Shape_RotateRect); m_shapes.append(shape); }
-	shape->rotatedRect = { cx, cy, w, h, 0.0 };
+	shape->cx = cx; shape->cy = cy; shape->w = w; shape->h = h; shape->angle = 0.0;
 
 	clearSceneShape();
 	m_activeShape = shape;
@@ -1646,7 +1647,7 @@ void ImageCanvasView::commitEllipse()
 
 	DrawShapeItem* shape = findShapeByType(Shape_Ellipse);
 	if (!shape) { shape = new DrawShapeItem(Shape_Ellipse); m_shapes.append(shape); }
-	shape->ellipse = { cx, cy, r1, r2, 0.0 };
+	shape->cx = cx; shape->cy = cy; shape->r = r1; shape->r2 = r2; shape->angle = 0.0;
 
 	clearSceneShape();
 	m_activeShape = shape;
@@ -1655,6 +1656,15 @@ void ImageCanvasView::commitEllipse()
 
 // ===== 形状查询 =====
 
+/*
+ *  【过渡态】当前数据模型：每种图形类型全局至多一个实例（单实例模型）。
+ *  该约束内嵌于本函数——它返回"首个匹配 type 的对象"并复用，而非新建。
+ *
+ *  演进方向（多实例化，未来"多个检测目标"时触发）：
+ *    1. 用 DrawShapeItem::id 作为唯一标识，新增 findShapeById(id) 定位；
+ *    2. commit* 系列改为"总是 new + 追加到 m_shapes"，而非 findShapeByType 复用；
+ *    3. 本函数届时废弃或改语义为"返回全部同 type 实例"。
+ */
 DrawShapeItem* ImageCanvasView::findShapeByType(DrawShapeType type)
 {
 	for (auto* s : m_shapes)
@@ -1691,10 +1701,10 @@ void ImageCanvasView::updateRectFromHandle(const QPointF& scenePos)
 	if (!m_dragShape || m_dragHandleIndex < 0) return;
 
 	double sx = scenePos.x(), sy = scenePos.y();
-	double& cx = m_dragShape->rect.cx;
-	double& cy = m_dragShape->rect.cy;
-	double& w  = m_dragShape->rect.w;
-	double& h  = m_dragShape->rect.h;
+	double& cx = m_dragShape->cx;
+	double& cy = m_dragShape->cy;
+	double& w  = m_dragShape->w;
+	double& h  = m_dragShape->h;
 
 	double left0   = m_dragStartRect.cx - m_dragStartRect.w / 2.0;
 	double right0  = m_dragStartRect.cx + m_dragStartRect.w / 2.0;
@@ -1732,10 +1742,10 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 	if (m_isRotating)
 	{
 		// 旋转手柄 → 计算中心到鼠标的角度
-		double cx = m_dragShape->rotatedRect.cx;
-		double cy = m_dragShape->rotatedRect.cy;
+		double cx = m_dragShape->cx;
+		double cy = m_dragShape->cy;
 		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
-		m_dragShape->rotatedRect.angle = angle;
+		m_dragShape->angle = angle;
 		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 		syncParamPanel(m_dragShape);
 	}
@@ -1785,10 +1795,10 @@ void ImageCanvasView::updateRotatedRectFromHandle(const QPointF& scenePos)
 		// 新中心从局部坐标转回世界坐标（绕拖拽起始中心旋转）
 		double cosA = qCos(qDegreesToRadians(startAngle));
 		double sinA = qSin(qDegreesToRadians(startAngle));
-		m_dragShape->rotatedRect.cx = m_dragStartRect.cx + newCxLocal*cosA - newCyLocal*sinA;
-		m_dragShape->rotatedRect.cy = m_dragStartRect.cy + newCxLocal*sinA + newCyLocal*cosA;
-		m_dragShape->rotatedRect.w  = newW;
-		m_dragShape->rotatedRect.h  = newH;
+		m_dragShape->cx = m_dragStartRect.cx + newCxLocal*cosA - newCyLocal*sinA;
+		m_dragShape->cy = m_dragStartRect.cy + newCxLocal*sinA + newCyLocal*cosA;
+		m_dragShape->w  = newW;
+		m_dragShape->h  = newH;
 
 		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 		syncParamPanel(m_dragShape);
@@ -1818,9 +1828,9 @@ void ImageCanvasView::updateCircleFromHandle(const QPointF& scenePos)
 	}
 	newR = std::max(newR, 1.5);
 
-	m_dragShape->circle.cx = cx0;
-	m_dragShape->circle.cy = cy0;
-	m_dragShape->circle.r  = newR;
+	m_dragShape->cx = cx0;
+	m_dragShape->cy = cy0;
+	m_dragShape->r  = newR;
 
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);
@@ -1855,9 +1865,9 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 		newR = std::max(newR, 1.0);
 		// 更新当前拖拽的那个半径（可能是 r1 也可能是 r2）
 		if (oldR1 >= oldR2)
-			m_dragShape->ring.r1 = newR;
+			m_dragShape->r = newR;
 		else
-			m_dragShape->ring.r2 = newR;
+			m_dragShape->r2 = newR;
 	}
 	else
 	{
@@ -1871,13 +1881,13 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 		}
 		newR = std::max(newR, 1.0);
 		if (oldR1 >= oldR2)
-			m_dragShape->ring.r2 = newR;
+			m_dragShape->r2 = newR;
 		else
-			m_dragShape->ring.r1 = newR;
+			m_dragShape->r = newR;
 	}
 
-	m_dragShape->ring.cx = cx0;
-	m_dragShape->ring.cy = cy0;
+	m_dragShape->cx = cx0;
+	m_dragShape->cy = cy0;
 
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);
@@ -1886,8 +1896,8 @@ void ImageCanvasView::updateRingFromHandle(const QPointF& scenePos)
 // ===== 多边形 Handle 拖拽 =====
 void ImageCanvasView::updatePolygonFromHandle(const QPointF& scenePos)
 {
-	if(!m_dragShape||m_dragHandleIndex<0||m_dragHandleIndex>=m_dragShape->polygon.pts.size())return;
-	m_dragShape->polygon.pts[m_dragHandleIndex]=scenePos;
+	if(!m_dragShape||m_dragHandleIndex<0||m_dragHandleIndex>=m_dragShape->pts.size())return;
+	m_dragShape->pts[m_dragHandleIndex]=scenePos;
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);
 }
@@ -1897,7 +1907,7 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 {
 	if (!m_dragShape) return;
 
-	double cx = m_dragShape->arc.cx, cy = m_dragShape->arc.cy;
+	double cx = m_dragShape->cx, cy = m_dragShape->cy;
 
 	// 旋转
 	if (m_isRotating) {
@@ -1905,7 +1915,7 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 		double delta = newMidAng - m_dragStartAngle;
 		if (delta > 180.0) delta -= 360.0;
 		if (delta < -180.0) delta += 360.0;
-		m_dragShape->arc.startAngle += delta;
+		m_dragShape->startAngle += delta;
 		m_dragStartAngle = newMidAng;
 		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 		syncParamPanel(m_dragShape);
@@ -1916,16 +1926,16 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 
 	if(m_dragHandleIndex==0||m_dragHandleIndex==1||m_dragHandleIndex==4||m_dragHandleIndex==5){
 		double na=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy,scenePos.x()-cx)));
-		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->arc.startAngle=na;else m_dragShape->arc.endAngle=na;
-		double sa=m_dragShape->arc.startAngle,ea=m_dragShape->arc.endAngle;bool cw=(m_dragShape->arc.span<0);
-		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->arc.span=cw?(sf-360.0):sf;
+		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->startAngle=na;else m_dragShape->endAngle=na;
+		double sa=m_dragShape->startAngle,ea=m_dragShape->endAngle;bool cw=(m_dragShape->span<0);
+		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->span=cw?(sf-360.0):sf;
 		// 归一化未拖拽的那一端，避免残留 >360 的值导致后续计算异常
 		if(m_dragHandleIndex==0||m_dragHandleIndex==4)
-			m_dragShape->arc.endAngle=ShapeGeometry::normAngle360(m_dragShape->arc.endAngle);
+			m_dragShape->endAngle=ShapeGeometry::normAngle360(m_dragShape->endAngle);
 		else
-			m_dragShape->arc.startAngle=ShapeGeometry::normAngle360(m_dragShape->arc.startAngle);
-	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rOuter=std::max(nr,1.5);
-	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rInner=std::max(nr,1.5);}
+			m_dragShape->startAngle=ShapeGeometry::normAngle360(m_dragShape->startAngle);
+	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->r=std::max(nr,1.5);
+	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->r2=std::max(nr,1.5);}
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);
 }
@@ -1938,17 +1948,17 @@ void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 	if (m_isRotating)
 	{
 		// 旋转手柄 → 计算角度
-		double cx = m_dragShape->ellipse.cx;
-		double cy = m_dragShape->ellipse.cy;
+		double cx = m_dragShape->cx;
+		double cy = m_dragShape->cy;
 		double angle = qRadiansToDegrees(qAtan2(scenePos.y()-cy, scenePos.x()-cx)) + 90.0;
-		m_dragShape->ellipse.angle = angle;
+		m_dragShape->angle = angle;
 		m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 		syncParamPanel(m_dragShape);
 		return;
 	}
 
 	// 普通控制点拖拽：先转回局部坐标系
-	double angle = m_dragShape->ellipse.angle;
+	double angle = m_dragShape->angle;
 	double rad   = -qDegreesToRadians(angle);
 	double dx    = scenePos.x() - m_dragStartRect.cx;
 	double dy    = scenePos.y() - m_dragStartRect.cy;
@@ -1968,10 +1978,10 @@ void ImageCanvasView::updateEllipseFromHandle(const QPointF& scenePos)
 	newR1 = std::max(newR1, 1.5);
 	newR2 = std::max(newR2, 1.5);
 
-	m_dragShape->ellipse.cx = m_dragStartRect.cx;
-	m_dragShape->ellipse.cy = m_dragStartRect.cy;
-	m_dragShape->ellipse.r1 = newR1;
-	m_dragShape->ellipse.r2 = newR2;
+	m_dragShape->cx = m_dragStartRect.cx;
+	m_dragShape->cy = m_dragStartRect.cy;
+	m_dragShape->r = newR1;
+	m_dragShape->r2 = newR2;
 
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);

@@ -132,5 +132,5 @@ void ParamPanelWidget::applyValues(const QList<ParamField>& fields, DrawShapeIte
 	for (int i = 0; i < fields.size() && i < m_spins.size(); ++i)
 		fields[i].setter(shape, m_spins[i]->value());
 	if (fields.size() >= 6 && shape.type == Shape_Arc)
-		shape.arc.endAngle = shape.arc.startAngle + shape.arc.span;
+		shape.endAngle = shape.startAngle + shape.span;
 }

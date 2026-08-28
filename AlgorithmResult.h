@@ -53,12 +53,23 @@ struct MeasureResult {
 
 /* ========================================================================
  *  算法结果容器：一次算法处理的完整输出集合（独立所有权，与标注集合隔离）
+ *
+ *  语义协议（对"未来多步流水线"的关键预设）：
+ *    - AlgorithmResult 是【一次工具执行】的标准输出载体，与 DrawShapeItem（几何载体）正交：
+ *        DrawShapeItem  ⟶ 几何（无论来自用户标注还是算法输出，收敛到同一几何载体）
+ *        AlgorithmResult⟶ 算法产出的"富语义结果"（含置信度/类别/测量值等几何之外的信息）
+ *    - 同一张图可以有【多个】 AlgorithmResult（多个算法实例 / 多个工具），互不干扰；
+ *      每个 result 通过 engine + toolId + resultId 唯一定位。
+ *    - result 可"显式降级"为 DrawShapeItem（convertDetectionToShapes 等），
+ *      也可保留富语义（置信度、类别分值）供判定/可视化，二者单向流动，不自动互同步。
  * ======================================================================== */
 class AlgorithmResult
 {
 public:
-	/*  引擎来源标识：opencv / halcon / yolo / unet / ... */
+	/*  定位元信息：engine = opencv/halcon/yolo/unet...；toolId = 产生该结果的工具实例 id */
 	QString engine;
+	QString toolId;
+	QString resultId;   /*  结果唯一标识（多实例、多工具并存时用） */
 
 	/*  结果几何载体（三类可并存，代表一次处理的不同产出） */
 	QList<DetectionBox>     detections;
