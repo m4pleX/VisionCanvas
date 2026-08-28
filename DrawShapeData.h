@@ -36,10 +36,7 @@ struct DrawShapeItem
 	struct Ring { double cx = 0, cy = 0, r1 = 0, r2 = 0; } ring;
 	struct Arc {
 		double cx = 0, cy = 0, rOuter = 0, rInner = 0, startAngle = 0, endAngle = 0;
-		bool isBiarc = false;
-		double ax = 0, ay = 0, bx = 0, by = 0;
-		double o1x = 0, o1y = 0, r1 = 0, r2 = 0;
-		double px = 0, py = 0;
+		double span = 0;   /*  扇环跨度（角度；正=逆时针，负=顺时针） */
 	} arc;
 	struct Polygon { QList<QPointF> pts; } polygon;
 

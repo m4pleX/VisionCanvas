@@ -44,7 +44,7 @@ QJsonObject AnnotationIO::shapeToJson(const DrawShapeItem& s)
 		o["cx"] = s.arc.cx; o["cy"] = s.arc.cy;
 		o["rOuter"] = s.arc.rOuter; o["rInner"] = s.arc.rInner;
 		o["startAngle"] = s.arc.startAngle; o["endAngle"] = s.arc.endAngle;
-		o["span"] = s.arc.r1;
+		o["span"] = s.arc.span;
 		break;
 	case Shape_Polygon:
 	{
@@ -104,7 +104,7 @@ DrawShapeItem* AnnotationIO::shapeFromJson(const QJsonObject& o)
 		s->arc.rOuter = o["rOuter"].toDouble(); s->arc.rInner = o["rInner"].toDouble();
 		s->arc.startAngle = o["startAngle"].toDouble();
 		s->arc.endAngle = o["endAngle"].toDouble();
-		s->arc.r1 = o["span"].toDouble();
+		s->arc.span = o["span"].toDouble();
 		break;
 	case Shape_Polygon:
 	{

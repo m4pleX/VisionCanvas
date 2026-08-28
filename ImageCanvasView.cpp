@@ -3,6 +3,7 @@
 #include "ShapeHandleHelper.h"
 #include "ParamPanelWidget.h"
 #include "ScaleConfig.h"
+#include "ShapeGeometry.h"
 
 #include <QtAlgorithms>
 #include <QFile>
@@ -32,20 +33,6 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtMath>
-
-static inline double normAngle360(double deg) { while(deg<0)deg+=360.0; while(deg>=360.0)deg-=360.0; return deg; }
-
-// 三点外接圆（外心 + 半径）
-static bool circumcircle(const QPointF& p1, const QPointF& p2, const QPointF& p3, QPointF& c, double& r) {
-	double x1=p1.x(),y1=p1.y(), x2=p2.x(),y2=p2.y(), x3=p3.x(),y3=p3.y();
-	double d=2.0*(x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2));
-	if(std::abs(d)<1e-12) return false;
-	c=QPointF(((x1*x1+y1*y1)*(y2-y3)+(x2*x2+y2*y2)*(y3-y1)+(x3*x3+y3*y3)*(y1-y2))/d,
-	          ((x1*x1+y1*y1)*(x3-x2)+(x2*x2+y2*y2)*(x1-x3)+(x3*x3+y3*y3)*(x2-x1))/d);
-	r=std::sqrt((x1-c.x())*(x1-c.x())+(y1-c.y())*(y1-c.y())); return true;
-}
-
-static bool solveConcentricArc(const QPointF& A, const QPointF& B, double r1, double r2, QPointF& O, QPointF& P);
 
 // ===== 构造/析构 =====
 
@@ -271,10 +258,10 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 					}else if(m_drawStep == 2){
 						// 第三点锁r1
 						QPointF A(m_circlePt1),B(m_circlePt2),C(scenePos),O;double r1;
-						if(circumcircle(A,B,C,O,r1)&&r1>1.5){
-							double aA=normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
-							double aB=normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(),B.x()-O.x())));
-							double aC=normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(),C.x()-O.x())));
+						if(ShapeGeometry::circumcircle(A,B,C,O,r1)&&r1>1.5){
+							double aA=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
+							double aB=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(),B.x()-O.x())));
+							double aC=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(),C.x()-O.x())));
 							double sf=aB-aA;if(sf<=0)sf+=360.0;double rc=aC-aA;if(rc<0)rc+=360.0;
 							double sp=(rc<=sf)?sf:(sf-360.0);
 							m_anchorPoint=O;m_arcStartAngle=aA;m_arcEndAngle=sp;
@@ -297,10 +284,10 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				QPointF A(m_circlePt1),B(m_circlePt2);
 				if(m_drawStep==2){
 					QPointF C(scenePos),O;double r;
-					if(circumcircle(A,B,C,O,r)&&r>1.5){
-						double aA=normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
-						double aB=normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(),B.x()-O.x())));
-						double aC=normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(),C.x()-O.x())));
+					if(ShapeGeometry::circumcircle(A,B,C,O,r)&&r>1.5){
+						double aA=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(A.y()-O.y(),A.x()-O.x())));
+						double aB=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(B.y()-O.y(),B.x()-O.x())));
+						double aC=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(C.y()-O.y(),C.x()-O.x())));
 						double sf=aB-aA;if(sf<=0)sf+=360.0;double rc=aC-aA;if(rc<0)rc+=360.0;
 						double sp=(rc<=sf)?sf:(sf-360.0);
 						if(!m_ghostArcPath){m_ghostArcPath=new QGraphicsPathItem();QPen p(QColor(0,180,255),m_penWidth,Qt::DashLine);p.setCosmetic(true);m_ghostArcPath->setPen(p);m_ghostArcPath->setZValue(99);m_scene->addItem(m_ghostArcPath);}
@@ -809,7 +796,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 						m_dragShape = m_activeShape;
 						m_dragHandleIndex = hIdx;
 						if (m_activeShape->type == Shape_Arc)
-							m_dragStartAngle = normAngle360(m_activeShape->arc.startAngle + m_activeShape->arc.r1 / 2.0);
+							m_dragStartAngle = ShapeGeometry::normAngle360(m_activeShape->arc.startAngle + m_activeShape->arc.span / 2.0);
 						else
 							m_dragStartAngle = m_activeShape->rotatedRect.angle;
 						ui.canvas_view_main->setCursor(Qt::ClosedHandCursor);
@@ -856,7 +843,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				}
 
 				// 检测形状内部拖动
-			if (isPointInShape(m_activeShape, scenePos))
+			if (ShapeGeometry::contains(m_activeShape, scenePos))
 			{
 			m_isDraggingShape = true;
 			if (m_activeShape->type == Shape_RotateRect)
@@ -909,7 +896,7 @@ bool ImageCanvasView::eventFilter(QObject* obj, QEvent* event)
 				else
 				{
 					// 形状本体悬停加粗
-					bool nowHovered = m_activeShape && isPointInShape(m_activeShape, scenePos);
+					bool nowHovered = m_activeShape && ShapeGeometry::contains(m_activeShape, scenePos);
 					if (nowHovered != m_isShapeHovered) {
 						applyShapeHover(nowHovered);
 						m_isShapeHovered = nowHovered;
@@ -1129,6 +1116,10 @@ void ImageCanvasView::slotLoadAnnotation()
 		return;
 	}
 	QJsonObject root = doc.object();
+
+	// 标注 schema 版本：旧文件可能缺失 version，默认按 v1 处理（向后兼容）
+	const int version = root["version"].toInt(1);
+	Q_UNUSED(version);   /*  当前仅 v1；未来 schema 演进时在此按 version 分派  */
 
 	// 关联图片：优先按记录路径加载，缺失时回退到文件同目录
 	QString imagePath = root["imagePath"].toString();
@@ -1358,7 +1349,7 @@ QList<ParamField> ImageCanvasView::buildParamFields(DrawShapeType type) const {
 			{QStringLiteral("半径1"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rOuter;}, [](DrawShapeItem& s,double v){s.arc.rOuter=v;}},
 			{QStringLiteral("半径2"),  -999999, 999999, [](const DrawShapeItem& s){return s.arc.rInner;}, [](DrawShapeItem& s,double v){s.arc.rInner=v;}},
 			{QStringLiteral("起始角"), 0.0, 360.0, [](const DrawShapeItem& s){return s.arc.startAngle;}, [](DrawShapeItem& s,double v){s.arc.startAngle=v;}},
-			{QStringLiteral("跨度"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.arc.r1;},       [](DrawShapeItem& s,double v){s.arc.r1=v;}},
+			{QStringLiteral("跨度"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.arc.span;},       [](DrawShapeItem& s,double v){s.arc.span=v;}},
 		}; break;
 	case Shape_Polygon:
 		// 动态处理
@@ -1569,27 +1560,6 @@ void ImageCanvasView::commitRing()
 	rebuildShapeOnScene(shape);
 }
 
-// ===== 扇环求解 =====
-static bool solveConcentricArc(const QPointF& A, const QPointF& B, double r1, double r2, QPointF& O, QPointF& P)
-{
-	double d = std::sqrt((B.x()-A.x())*(B.x()-A.x())+(B.y()-A.y())*(B.y()-A.y()));
-	if (d<1e-6 || r1<1.0||r2<1.0) return false;
-	double x = (r1*r1 - r2*r2 + d*d)/(2.0*d);
-	double det = r1*r1 - x*x;
-	if (det<-1e-6) return false;
-	double y = std::sqrt(std::max(0.0,det));
-	double dx=B.x()-A.x(), dy=B.y()-A.y();
-	double ux=dx/d, uy=dy/d, vx=-uy, vy=ux;
-	O = QPointF(A.x()+x*ux+y*vx, A.y()+x*uy+y*vy);
-	double oax=A.x()-O.x(), oay=A.y()-O.y(), obx=B.x()-O.x(), oby=B.y()-O.y();
-	double la=std::sqrt(oax*oax+oay*oay), lb=std::sqrt(obx*obx+oby*oby);
-	if(la<1e-6||lb<1e-6) return false;
-	double mx=oax/la+obx/lb, my=oay/la+oby/lb, ml=std::sqrt(mx*mx+my*my);
-	if(ml<1e-6) return false;
-	P = QPointF(O.x()+r1*mx/ml, O.y()+r1*my/ml);
-	return true;
-}
-
 // ===== 扇环提交 =====
 void ImageCanvasView::commitArc()
 {
@@ -1601,7 +1571,7 @@ void ImageCanvasView::commitArc()
 	if(!shape){shape=new DrawShapeItem(Shape_Arc);m_shapes.append(shape);}
 	shape->arc.cx=cx;shape->arc.cy=cy;
 	shape->arc.rOuter=rOuter;shape->arc.rInner=rInner;
-	shape->arc.startAngle=aA;shape->arc.endAngle=aA+span;shape->arc.r1=span;
+	shape->arc.startAngle=aA;shape->arc.endAngle=aA+span;shape->arc.span=span;
 	clearSceneShape();m_activeShape=shape;rebuildShapeOnScene(shape);
 }
 
@@ -1699,77 +1669,6 @@ DrawShapeItem* ImageCanvasView::findShapeByType(DrawShapeType type)
 
 // ===== 控制点 & 中心十字 =====
 // (已迁移至 ShapeHandleHelper)
-
-bool ImageCanvasView::isPointInShape(const DrawShapeItem* shape, const QPointF& scenePos) const
-{
-	if (!shape) return false;
-	switch (shape->type)
-	{
-	case Shape_Rect:
-	{
-		double left   = shape->rect.cx - shape->rect.w / 2.0;
-		double right  = shape->rect.cx + shape->rect.w / 2.0;
-		double top    = shape->rect.cy - shape->rect.h / 2.0;
-		double bottom = shape->rect.cy + shape->rect.h / 2.0;
-		return scenePos.x() >= left && scenePos.x() <= right && scenePos.y() >= top && scenePos.y() <= bottom;
-	}
-	case Shape_RotateRect:
-	{
-		double rad = -qDegreesToRadians(shape->rotatedRect.angle);
-		double dx  = scenePos.x() - shape->rotatedRect.cx;
-		double dy  = scenePos.y() - shape->rotatedRect.cy;
-		double lx  = dx * qCos(rad) - dy * qSin(rad);
-		double ly  = dx * qSin(rad) + dy * qCos(rad);
-		double hw  = shape->rotatedRect.w / 2.0;
-		double hh  = shape->rotatedRect.h / 2.0;
-		return lx >= -hw && lx <= hw && ly >= -hh && ly <= hh;
-	}
-	case Shape_Circle:
-	{
-		double d2 = (scenePos.x()-shape->circle.cx)*(scenePos.x()-shape->circle.cx)
-		          + (scenePos.y()-shape->circle.cy)*(scenePos.y()-shape->circle.cy);
-		return d2 <= shape->circle.r * shape->circle.r;
-	}
-	case Shape_Ring:
-	{
-		double d2 = (scenePos.x()-shape->ring.cx)*(scenePos.x()-shape->ring.cx)
-		          + (scenePos.y()-shape->ring.cy)*(scenePos.y()-shape->ring.cy);
-		double rLarger  = std::max(shape->ring.r1, shape->ring.r2);
-		double rSmaller = std::min(shape->ring.r1, shape->ring.r2);
-		return d2 <= rLarger * rLarger && d2 >= rSmaller * rSmaller;
-	}
-	case Shape_Arc:
-	{
-		double cx=shape->arc.cx,cy=shape->arc.cy;
-		double rBig=std::max(shape->arc.rOuter,shape->arc.rInner);
-		double rSml=std::min(shape->arc.rOuter,shape->arc.rInner);
-		double dx=scenePos.x()-cx,dy=scenePos.y()-cy,d=std::sqrt(dx*dx+dy*dy);
-		if(d>rBig+8.0||d<rSml-8.0)return false;
-		double ang=normAngle360(qRadiansToDegrees(std::atan2(dy,dx)));
-		double sa=normAngle360(shape->arc.startAngle),span=shape->arc.r1;
-		double rel=ang-sa;if(rel<0)rel+=360.0;
-		if(span>=0)return rel<=span;
-		return rel>=360.0+span;  // 顺时针弧：检测"非缺口"范围
-	}
-	case Shape_Polygon:
-	{
-		QPolygonF poly;for(auto& pt:shape->polygon.pts)poly<<pt;
-		return poly.containsPoint(scenePos,Qt::OddEvenFill);
-	}
-	case Shape_Ellipse:
-	{
-		double rad = -qDegreesToRadians(shape->ellipse.angle);
-		double dx  = scenePos.x() - shape->ellipse.cx;
-		double dy  = scenePos.y() - shape->ellipse.cy;
-		double lx  = dx * qCos(rad) - dy * qSin(rad);
-		double ly  = dx * qSin(rad) + dy * qCos(rad);
-		double r1  = shape->ellipse.r1;
-		double r2  = shape->ellipse.r2;
-		return (lx*lx)/(r1*r1) + (ly*ly)/(r2*r2) <= 1.0;
-	}
-	default: return false;
-	}
-}
 
 QGraphicsEllipseItem* ImageCanvasView::handleAt(const QPointF& scenePos) const
 {
@@ -2002,7 +1901,7 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 
 	// 旋转
 	if (m_isRotating) {
-		double newMidAng = normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy, scenePos.x()-cx)));
+		double newMidAng = ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy, scenePos.x()-cx)));
 		double delta = newMidAng - m_dragStartAngle;
 		if (delta > 180.0) delta -= 360.0;
 		if (delta < -180.0) delta += 360.0;
@@ -2016,15 +1915,15 @@ void ImageCanvasView::updateArcFromHandle(const QPointF& scenePos)
 	if (m_dragHandleIndex < 0 || m_dragHandleIndex >= 6) return;
 
 	if(m_dragHandleIndex==0||m_dragHandleIndex==1||m_dragHandleIndex==4||m_dragHandleIndex==5){
-		double na=normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy,scenePos.x()-cx)));
+		double na=ShapeGeometry::normAngle360(qRadiansToDegrees(std::atan2(scenePos.y()-cy,scenePos.x()-cx)));
 		if(m_dragHandleIndex==0||m_dragHandleIndex==4)m_dragShape->arc.startAngle=na;else m_dragShape->arc.endAngle=na;
-		double sa=m_dragShape->arc.startAngle,ea=m_dragShape->arc.endAngle;bool cw=(m_dragShape->arc.r1<0);
-		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->arc.r1=cw?(sf-360.0):sf;
+		double sa=m_dragShape->arc.startAngle,ea=m_dragShape->arc.endAngle;bool cw=(m_dragShape->arc.span<0);
+		double sf=ea-sa;if(sf<=0)sf+=360.0;m_dragShape->arc.span=cw?(sf-360.0):sf;
 		// 归一化未拖拽的那一端，避免残留 >360 的值导致后续计算异常
 		if(m_dragHandleIndex==0||m_dragHandleIndex==4)
-			m_dragShape->arc.endAngle=normAngle360(m_dragShape->arc.endAngle);
+			m_dragShape->arc.endAngle=ShapeGeometry::normAngle360(m_dragShape->arc.endAngle);
 		else
-			m_dragShape->arc.startAngle=normAngle360(m_dragShape->arc.startAngle);
+			m_dragShape->arc.startAngle=ShapeGeometry::normAngle360(m_dragShape->arc.startAngle);
 	}else if(m_dragHandleIndex==2){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rOuter=std::max(nr,1.5);
 	}else if(m_dragHandleIndex==3){double nr=std::sqrt((scenePos.x()-cx)*(scenePos.x()-cx)+(scenePos.y()-cy)*(scenePos.y()-cy));m_dragShape->arc.rInner=std::max(nr,1.5);}
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);

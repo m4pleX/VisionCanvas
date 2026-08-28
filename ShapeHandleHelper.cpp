@@ -112,7 +112,7 @@ void ShapeHandleHelper::rebuildHandles(const DrawShapeItem& shape, ShapeHandleSe
 		addCirc(hs, m_scene, cx, cy, rL, rL);
 	} else if (kind == 5) { // Arc
 		double rO = shape.arc.rOuter, rI = shape.arc.rInner;
-		double sa = shape.arc.startAngle, sp = shape.arc.r1;
+		double sa = shape.arc.startAngle, sp = shape.arc.span;
 		double saR = qDegreesToRadians(sa), eaR = qDegreesToRadians(sa + sp);
 		double midA = sa + sp / 2, midR = qDegreesToRadians(midA);
 		QPointF oPts[3] = { {cx + rO * qCos(saR), cy + rO * qSin(saR)}, {cx + rO * qCos(eaR), cy + rO * qSin(eaR)}, {cx + rO * qCos(midR), cy + rO * qSin(midR)} };
@@ -199,7 +199,7 @@ void ShapeHandleHelper::updatePositions(const DrawShapeItem& shape, ShapeHandleS
 	}
 	case Shape_Arc: {
 		double cx = shape.arc.cx, cy = shape.arc.cy, rO = shape.arc.rOuter, rI = shape.arc.rInner;
-		double sa = shape.arc.startAngle, sp = shape.arc.r1, saR = qDegreesToRadians(sa), spR = qDegreesToRadians(sp);
+		double sa = shape.arc.startAngle, sp = shape.arc.span, saR = qDegreesToRadians(sa), spR = qDegreesToRadians(sp);
 		double eR = saR + spR, midA = sa + sp / 2, midR = qDegreesToRadians(midA);
 		if (0 < hs.handles.size()) moveHandle(hs.handles[0], QPointF(cx + rO * qCos(saR), cy + rO * qSin(saR)));
 		if (1 < hs.handles.size()) moveHandle(hs.handles[1], QPointF(cx + rO * qCos(eR), cy + rO * qSin(eR)));

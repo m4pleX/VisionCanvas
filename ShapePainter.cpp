@@ -43,7 +43,7 @@ QGraphicsItem* ShapePainter::buildItem(const DrawShapeItem& shape) {
 		auto* p = new QGraphicsPathItem(); p->setPath(t.map(o.subtracted(i))); p->setZValue(80); item = p; break;
 	}
 	case Shape_Arc: {
-		double cx = shape.arc.cx, cy = shape.arc.cy, rO = shape.arc.rOuter, rI = shape.arc.rInner, sa = shape.arc.startAngle, sp = shape.arc.r1;
+		double cx = shape.arc.cx, cy = shape.arc.cy, rO = shape.arc.rOuter, rI = shape.arc.rInner, sa = shape.arc.startAngle, sp = shape.arc.span;
 		double saR = qDegreesToRadians(sa), spR = qDegreesToRadians(sp); const int N = 128;
 		QPainterPath path; path.moveTo(cx + rO * qCos(saR), cy + rO * qSin(saR));
 		for (int i = 1; i <= N; ++i) { double a = saR + spR * i / N; path.lineTo(cx + rO * qCos(a), cy + rO * qSin(a)); }

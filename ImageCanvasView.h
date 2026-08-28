@@ -195,7 +195,6 @@ private:
 
 	DrawShapeItem* findShapeByType(DrawShapeType type);
 
-	bool isPointInShape(const DrawShapeItem* shape, const QPointF& scenePos) const;
 	QGraphicsEllipseItem* handleAt(const QPointF& scenePos) const;
 
 	void updateRectFromHandle(const QPointF& scenePos);

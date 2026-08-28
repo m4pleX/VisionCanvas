@@ -10,6 +10,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGLWidgets)
 qt_standard_project_setup()
 
 add_executable(VisionCanvas
+        AlgorithmResult.h
         AnnotationIO.cpp
         AnnotationIO.h
         DrawShapeData.h
@@ -21,11 +22,12 @@ add_executable(VisionCanvas
         ParamPanelWidget.cpp
         ParamPanelWidget.h
         ScaleConfig.h
+        ShapeGeometry.cpp
+        ShapeGeometry.h
         ShapeHandleHelper.cpp
         ShapeHandleHelper.h
         ShapePainter.cpp
         ShapePainter.h
-        ShapeStyleConfig.h
         ToolbarController.cpp
         ToolbarController.h)
 
