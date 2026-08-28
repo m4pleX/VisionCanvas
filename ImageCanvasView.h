@@ -179,7 +179,6 @@ private:
 	void hideParamPanel();
 	void applyParamAndRedraw();
 	void syncParamPanel(DrawShapeItem* shape);
-	QList<struct ParamField> buildParamFields(DrawShapeType type) const;
 
 	void startDraw(DrawShapeType type);
 	void stopDraw();

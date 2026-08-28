@@ -2,6 +2,7 @@
 #include "ShapePainter.h"
 #include "ShapeHandleHelper.h"
 #include "ParamPanelWidget.h"
+#include "ParamFieldFactory.h"
 #include "ScaleConfig.h"
 #include "ShapeGeometry.h"
 
@@ -1304,62 +1305,6 @@ void ImageCanvasView::hideDrawModeOverlay()
 
 // ===== 参数面板 =====
 
-QList<ParamField> ImageCanvasView::buildParamFields(DrawShapeType type) const {
-	QList<ParamField> fields;
-	switch (type) {
-	case Shape_Rect:
-		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
-			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.w;},  [](DrawShapeItem& s,double v){s.w=v;}},
-			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.h;},  [](DrawShapeItem& s,double v){s.h=v;}},
-		}; break;
-	case Shape_RotateRect:
-		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
-			{QStringLiteral("宽度"),   -999999, 999999, [](const DrawShapeItem& s){return s.w;},  [](DrawShapeItem& s,double v){s.w=v;}},
-			{QStringLiteral("高度"),   -999999, 999999, [](const DrawShapeItem& s){return s.h;},  [](DrawShapeItem& s,double v){s.h=v;}},
-			{QStringLiteral("角度"),   -999999, 999999, [](const DrawShapeItem& s){return s.angle;}, [](DrawShapeItem& s,double v){s.angle=v;}},
-		}; break;
-	case Shape_Circle:
-		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
-			{QStringLiteral("半径"),   -999999, 999999, [](const DrawShapeItem& s){return s.r;},  [](DrawShapeItem& s,double v){s.r=v;}},
-		}; break;
-	case Shape_Ellipse:
-		fields = {
-			{QStringLiteral("中心 X"),  -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
-			{QStringLiteral("中心 Y"),  -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
-			{QStringLiteral("半轴 r1"), -999999, 999999, [](const DrawShapeItem& s){return s.r;}, [](DrawShapeItem& s,double v){s.r=v;}},
-			{QStringLiteral("半轴 r2"), -999999, 999999, [](const DrawShapeItem& s){return s.r2;}, [](DrawShapeItem& s,double v){s.r2=v;}},
-			{QStringLiteral("角度"),    -999999, 999999, [](const DrawShapeItem& s){return s.angle;}, [](DrawShapeItem& s,double v){s.angle=v;}},
-		}; break;
-	case Shape_Ring:
-		fields = {
-			{QStringLiteral("中心 X"),   -999999, 999999, [](const DrawShapeItem& s){return s.cx;}, [](DrawShapeItem& s,double v){s.cx=v;}},
-			{QStringLiteral("中心 Y"),   -999999, 999999, [](const DrawShapeItem& s){return s.cy;}, [](DrawShapeItem& s,double v){s.cy=v;}},
-			{QStringLiteral("半径 r1"),  -999999, 999999, [](const DrawShapeItem& s){return s.r;}, [](DrawShapeItem& s,double v){s.r=v;}},
-			{QStringLiteral("半径 r2"),  -999999, 999999, [](const DrawShapeItem& s){return s.r2;}, [](DrawShapeItem& s,double v){s.r2=v;}},
-		}; break;
-	case Shape_Arc:
-		fields = {
-			{QStringLiteral("中心 X"), -999999, 999999, [](const DrawShapeItem& s){return s.cx;},    [](DrawShapeItem& s,double v){s.cx=v;}},
-			{QStringLiteral("中心 Y"), -999999, 999999, [](const DrawShapeItem& s){return s.cy;},    [](DrawShapeItem& s,double v){s.cy=v;}},
-			{QStringLiteral("半径1"),  -999999, 999999, [](const DrawShapeItem& s){return s.r;}, [](DrawShapeItem& s,double v){s.r=v;}},
-			{QStringLiteral("半径2"),  -999999, 999999, [](const DrawShapeItem& s){return s.r2;}, [](DrawShapeItem& s,double v){s.r2=v;}},
-			{QStringLiteral("起始角"), 0.0, 360.0, [](const DrawShapeItem& s){return s.startAngle;}, [](DrawShapeItem& s,double v){s.startAngle=v;}},
-			{QStringLiteral("跨度"),   -360.0, 360.0, [](const DrawShapeItem& s){return s.span;},       [](DrawShapeItem& s,double v){s.span=v;}},
-		}; break;
-	case Shape_Polygon:
-		// 动态处理
-		break;
-	default: break;
-	}
-	return fields;
-}
-
 void ImageCanvasView::slotOpenParamPanel() { showParamPanel(); }
 
 void ImageCanvasView::showParamPanel() {
@@ -1385,7 +1330,7 @@ void ImageCanvasView::showParamPanel() {
 						fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.pts[vi].ry()=v;}});
 					}
 				} else {
-					fields = buildParamFields(s->type);
+					fields = ParamFieldFactory::buildFields(s->type);
 				}
 				m_paramPanel->applyValues(fields, *s);
 				if (m_shapeItem) { m_scene->removeItem(m_shapeItem); delete m_shapeItem; m_shapeItem = nullptr; }
@@ -1407,7 +1352,7 @@ void ImageCanvasView::showParamPanel() {
 				[idx](DrawShapeItem& s,double v){s.pts[idx].ry()=v;}});
 		}
 	} else {
-		fields = buildParamFields(type);
+		fields = ParamFieldFactory::buildFields(type);
 	}
 
 	m_paramPanel->buildUI(fields, existing, type == Shape_Polygon);
@@ -1431,7 +1376,7 @@ void ImageCanvasView::syncParamPanel(DrawShapeItem* shape) {
 			fields.append({QString(), -999999, 999999, [vi](const DrawShapeItem& a){return a.pts[vi].y();}, [vi](DrawShapeItem& a,double v){a.pts[vi].ry()=v;}});
 		}
 	} else {
-		fields = buildParamFields(shape->type);
+		fields = ParamFieldFactory::buildFields(shape->type);
 	}
 	m_paramPanel->syncValues(fields, *shape);
 }
@@ -1451,7 +1396,7 @@ void ImageCanvasView::applyParamAndRedraw() {
 			fields.append({QString(), -999999, 999999, [idx](const DrawShapeItem& s){return s.pts[idx].y();}, [idx](DrawShapeItem& s,double v){s.pts[idx].ry()=v;}});
 		}
 	} else {
-		fields = buildParamFields(type);
+		fields = ParamFieldFactory::buildFields(type);
 	}
 	m_paramPanel->applyValues(fields, *shape);
 

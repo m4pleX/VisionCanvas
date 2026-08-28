@@ -21,6 +21,8 @@ add_executable(VisionCanvas
         main.cpp
         ParamPanelWidget.cpp
         ParamPanelWidget.h
+        ParamFieldFactory.cpp
+        ParamFieldFactory.h
         ScaleConfig.h
         ShapeGeometry.cpp
         ShapeGeometry.h
