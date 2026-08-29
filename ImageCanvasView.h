@@ -41,6 +41,7 @@ class QGraphicsLineItem;
 class QGraphicsPathItem;
 class QGraphicsPixmapItem;
 class QGraphicsRectItem;
+class QGraphicsSimpleTextItem;
 class QGraphicsScene;
 class QKeyEvent;
 class QPushButton;
@@ -79,6 +80,7 @@ private slots:
 	void slot_draw_shape_changed(int index);
 	void slotResetShape();
 	void slotOpenParamPanel();
+	void slotRunSimulateDetect();
 
 private:
 	/*  ====================== UI 绑定 ====================== */
@@ -123,6 +125,10 @@ private:
 	double m_penWidth        = 2.0;
 	bool   m_isShapeHovered  = false;
 	bool   m_thinLine        = false;
+
+	/*  ====================== 检测结果叠层（与标注数据完全隔离） ====================== */
+	QList<QGraphicsRectItem*> m_detectResultItems;
+	QList<QGraphicsSimpleTextItem*> m_detectResultLabels;
 
 	/*  ====================== 绘制模式临时状态 ====================== */
 	enum InteractionMode { Mode_View, Mode_Draw, Mode_None };
@@ -200,4 +206,7 @@ private:
 	void refreshActiveShape();
 
 	void applyShapeHover(bool hover);
+
+	/*  清除检测结果叠层（框 + 标签图形项） */
+	void clearDetectResultOverlay();
 };

@@ -6,6 +6,11 @@
 #include "ScaleConfig.h"
 #include "ShapeEditor.h"
 #include "ShapeGeometry.h"
+#include "CvImageConverter.h"
+#include "GrayDefectDetector.h"
+#include "SimulatorDetector.h"
+
+#include <opencv2/core.hpp>
 
 #include <QtAlgorithms>
 #include <QFile>
@@ -25,6 +30,7 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsPolygonItem>
 #include <QGraphicsScene>
+#include <QGraphicsSimpleTextItem>
 #include <QGraphicsView>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -111,6 +117,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.draw_btn_load_image, &QPushButton::clicked, this, &ImageCanvasView::slotLoadImage);
 	connect(ui.draw_btn_save_anno, &QPushButton::clicked, this, &ImageCanvasView::slotSaveAnnotation);
 	connect(ui.draw_btn_load_anno, &QPushButton::clicked, this, &ImageCanvasView::slotLoadAnnotation);
+	connect(ui.draw_btn_run_detect, &QPushButton::clicked, this, &ImageCanvasView::slotRunSimulateDetect);
 	connect(ui.draw_cbox_shape_type, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 			this, &ImageCanvasView::slot_draw_shape_changed);
 	connect(ui.btn_reset_rect, &QPushButton::clicked, this, &ImageCanvasView::slotResetShape);
@@ -1658,4 +1665,57 @@ void ImageCanvasView::refreshActiveShape()
 	if (!m_dragShape) return;
 	m_handleHelper->updatePositions(*m_dragShape, *m_activeHandleSet, m_shapeItem);
 	syncParamPanel(m_dragShape);
+}
+
+/* ===== 模拟检测（第一阶段：假数据验证算法结果契约与上屏链路） ===== */
+
+void ImageCanvasView::clearDetectResultOverlay()
+{
+	for (auto* item : m_detectResultItems) { m_scene->removeItem(item); delete item; }
+	m_detectResultItems.clear();
+	for (auto* label : m_detectResultLabels) { m_scene->removeItem(label); delete label; }
+	m_detectResultLabels.clear();
+}
+
+void ImageCanvasView::slotRunSimulateDetect()
+{
+	// 校验：必须有已加载图像（默认像素图为 1280x960 占位，也允许检测）
+	const QPixmap pm = m_pixmapItem->pixmap();
+	const int imageW = pm.width();
+	const int imageH = pm.height();
+
+	// QPixmap -> QImage -> cv::Mat，喂给真实缺陷检测器
+	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
+	const cv::Mat img = CvImageConverter::toCvMat(qi);
+
+	AlgorithmResult result = GrayDefectDetector::detect(img);
+
+	// 清除旧检测叠层
+	clearDetectResultOverlay();
+
+	// 渲染新检测框：用独立图层，不污染 m_shapes / m_activeShape
+	QPen boxPen(QColor(255, 60, 60));
+	boxPen.setWidth(2);
+	boxPen.setCosmetic(true);
+
+	for (const DetectionBox& box : result.detections)
+	{
+		QRectF r(box.cx - box.w / 2.0, box.cy - box.h / 2.0, box.w, box.h);
+		auto* rectItem = m_scene->addRect(r, boxPen, QBrush(Qt::NoBrush));
+		rectItem->setZValue(85);
+		rectItem->setFlag(QGraphicsItem::ItemIgnoresTransformations, false);
+		m_detectResultItems.append(rectItem);
+
+		auto* labelItem = m_scene->addSimpleText(
+			QStringLiteral("%1 %.2f").arg(box.label).arg(box.confidence));
+		labelItem->setPos(r.left(), r.top() - 18);
+		labelItem->setBrush(QBrush(QColor(255, 60, 60)));
+		labelItem->setZValue(86);
+		m_detectResultLabels.append(labelItem);
+	}
+
+	// 反馈
+	ui.info_lab_resolution->setToolTip(QStringLiteral("检测到 %1 个目标").arg(result.detections.size()));
+	QMessageBox::information(this, QStringLiteral("运行检测"),
+		QStringLiteral("缺陷检测完成：%1 个缺陷区域").arg(result.detections.size()));
 }

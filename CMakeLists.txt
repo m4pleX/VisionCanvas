@@ -9,11 +9,24 @@ include_directories(.)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGLWidgets)
 qt_standard_project_setup()
 
+# ==== OpenCV 4.8.1 集成（Debug/Release 分别指向不同 install 目录） ====
+# 单配置生成器(Ninja)用 CMAKE_BUILD_TYPE 判断；多配置(VS)用 CMAKE_CONFIGURATION_TYPES
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(OpenCV_DIR "D:/MyCode/opencv-4.8.1/install-debug")
+else()
+    set(OpenCV_DIR "D:/MyCode/opencv-4.8.1/install-release")
+endif()
+find_package(OpenCV REQUIRED)
+
 add_executable(VisionCanvas
         AlgorithmResult.h
         AnnotationIO.cpp
         AnnotationIO.h
+        CvImageConverter.cpp
+        CvImageConverter.h
         DrawShapeData.h
+        GrayDefectDetector.cpp
+        GrayDefectDetector.h
         ImageCanvasView.cpp
         ImageCanvasView.h
         ImageCanvasView.qrc
@@ -32,7 +45,9 @@ add_executable(VisionCanvas
         ShapeHandleHelper.h
         ShapePainter.cpp
         ShapePainter.h
+        SimulatorDetector.cpp
+        SimulatorDetector.h
         ToolbarController.cpp
         ToolbarController.h)
 
-target_link_libraries(VisionCanvas PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGLWidgets)
+target_link_libraries(VisionCanvas PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGLWidgets ${OpenCV_LIBS})
