@@ -34,6 +34,7 @@
 #include "DrawShapeData.h"
 #include "AnnotationIO.h"
 #include "ToolbarController.h"
+#include "DetectionResultModel.h"
 
 class QGraphicsEllipseItem;
 class QGraphicsItem;
@@ -126,9 +127,10 @@ private:
 	bool   m_isShapeHovered  = false;
 	bool   m_thinLine        = false;
 
-	/*  ====================== 检测结果叠层（与标注数据完全隔离） ====================== */
-	QList<QGraphicsRectItem*> m_detectResultItems;
-	QList<QGraphicsSimpleTextItem*> m_detectResultLabels;
+	/*  ====================== 检测结果（宿主 + 叠层，与标注数据隔离） ====================== */
+	DetectionResultModel m_detectModel;                 /*  结果宿主：多结果/多实例的数据层 */
+	QList<QGraphicsRectItem*> m_detectResultItems;      /*  叠层：结果框 */
+	QList<QGraphicsSimpleTextItem*> m_detectResultLabels; /*  叠层：结果标签 */
 
 	/*  ====================== 绘制模式临时状态 ====================== */
 	enum InteractionMode { Mode_View, Mode_Draw, Mode_None };
@@ -209,4 +211,6 @@ private:
 
 	/*  清除检测结果叠层（框 + 标签图形项） */
 	void clearDetectResultOverlay();
+	/*  由 m_detectModel 驱动渲染检测叠层 */
+	void renderDetectOverlay();
 };

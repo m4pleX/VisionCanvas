@@ -1,17 +1,27 @@
 /*
  * 文件名：AlgorithmResult.h
- * 职责：算法结果层的所有权边界契约 + 引擎转换接口草案（仅声明，不实现）
+ * 职责：算法结果层的数据契约（机器视觉平台的只读输出载体）
  *
- * 设计核心（单一数据源 + 明确所有权）：
- *   1. 算法结果（检测/分割/测量）与用户标注 DrawShapeItem 是两个【独立】的数据集合，
- *      各自拥有独立的生命周期与所有权，【绝不自动双向同步】。
- *   2. 二者之间只通过【显式导入/导出】单向流动：
- *        - 导入：算法结果 -> 转换为一批 DrawShapeItem，显式加入标注集合；
- *        - 导出：标注集合 -> 转换为算法引擎所需的输入格式（OpenCV/HALCON/YOLO/UNet/COCO）。
- *     用户手动编辑标注，不反向修改算法结果；算法跑批，也不直接覆盖用户标注。
- *   3. 引擎转换仅做【格式转换】，不改动源数据（单一数据源的只读视图/转换结果原则）。
+ * 定位（机器视觉平台，而非标注工具）：
+ *   - 算法结果（检测/分割/测量）是【机器的判定输出】，属【只读】数据：
+ *     人不能拖拽/编辑其几何，只能查看、显隐、清除、导出判定结果。
+ *   - DrawShapeItem 的正确角色是【算法的输入几何】（ROI 框、测量基准线、
+ *     屏蔽区域等），由用户在运行算法前绘制，属于"参数/预处理几何"，
+ *     与算法输出是两种完全不同的语义，【不互相转换、不互相回填】。
  *
- * 本文件仅为契约草案，不包含任何实现；具体引擎适配器在第二阶段按需落地。
+ * 数据流（单向，无回填）：
+ *   用户绘制几何(DrawShapeItem)
+ *        ↓ 作为输入（ROI / 基准 / 参数）
+ *   算法引擎(OpenCV/HALCON/YOLO/UNet)
+ *        ↓ 产出
+ *   AlgorithmResult（只读结果：框/掩膜/测量值 + 置信度 + 判定）
+ *        ↓
+ *   可视化层（叠加只读显示） / 判定层（OK/NG） / 导出层（结果报表/控制信号）
+ *
+ *   AlgorithmResult 与 DrawShapeItem 是两套【独立】数据，所有权分离，
+ *   生命周期各自管理，不存在自动双向同步或显式互转。
+ *
+ * 本文件是数据契约；具体引擎适配器在引入各引擎时按需落地。
  */
 #pragma once
 
@@ -19,10 +29,10 @@
 #include <QList>
 #include <QPolygonF>
 #include <QRectF>
-#include "DrawShapeData.h"
 
 /* ========================================================================
- *  通用引擎无关的结果表示：以"框 / 掩膜 / 轮廓"三类几何载体承载各类算法输出
+ *  通用引擎无关的结果表示：以"框 / 掩膜 / 测量"三类几何载体承载算法输出
+ *  （全部为只读输出，供可视化/判定/导出，不参与人工编辑）
  * ======================================================================== */
 
 /*  目标检测结果（矩形框 / 旋转框 / 类别 / 置信度） */
@@ -52,16 +62,15 @@ struct MeasureResult {
 };
 
 /* ========================================================================
- *  算法结果容器：一次算法处理的完整输出集合（独立所有权，与标注集合隔离）
+ *  算法结果容器：一次算法处理的完整输出集合（只读，与输入几何隔离）
  *
  *  语义协议（对"未来多步流水线"的关键预设）：
- *    - AlgorithmResult 是【一次工具执行】的标准输出载体，与 DrawShapeItem（几何载体）正交：
- *        DrawShapeItem  ⟶ 几何（无论来自用户标注还是算法输出，收敛到同一几何载体）
- *        AlgorithmResult⟶ 算法产出的"富语义结果"（含置信度/类别/测量值等几何之外的信息）
- *    - 同一张图可以有【多个】 AlgorithmResult（多个算法实例 / 多个工具），互不干扰；
- *      每个 result 通过 engine + toolId + resultId 唯一定位。
- *    - result 可"显式降级"为 DrawShapeItem（convertDetectionToShapes 等），
- *      也可保留富语义（置信度、类别分值）供判定/可视化，二者单向流动，不自动互同步。
+ *    - AlgorithmResult 是【一次工具执行】的标准只读输出载体；
+ *    - 同一张图可以有【多个】 AlgorithmResult（多个算法实例 / 多个工具 / 多次运行），
+ *      互不干扰；每个 result 通过 engine + toolId + resultId 唯一定位；
+ *    - 结果可被上层按需消费：
+ *        可视化（叠加只读框/掩膜/测量值）、判定（OK/NG）、
+ *        导出（报表 / 控制信号）、以及作为【下一步算法的输入】（流水线串联）。
  * ======================================================================== */
 class AlgorithmResult
 {
@@ -81,23 +90,3 @@ public:
 	int     sourceWidth  = 0;
 	int     sourceHeight = 0;
 };
-
-/* ========================================================================
- *  引擎转换接口草案（仅声明，第二阶段实现）
- *  约定：所有 toXxx 均为【读标注 -> 产出引擎格式】，不修改标注；
- *        所有 fromXxx 均为【读引擎格式 -> 产出一批 DrawShapeItem】，供显式导入。
- * ======================================================================== */
-namespace AlgorithmBridge
-{
-	/*  ---- 导出标注 -> 引擎输入 ---- */
-	// 待实现：QList<DrawShapeItem> -> OpenCV 结构（cv::Rect/RotatedRect/Point 数组）
-	// 待实现：QList<DrawShapeItem> -> HALCON 结构（HRegion/HXLDContour）
-	// 待实现：QList<DrawShapeItem> -> YOLO 标签（归一化 [class,cx,cy,w,h]/OBB）
-	// 待实现：QList<DrawShapeItem> -> UNet 掩膜（逐形状 toMask + 类别索引）
-
-	/*  ---- 导入引擎结果 -> 标注 ---- */
-	// 待实现：convertDetectionToShapes(const QList<DetectionBox>&) -> 一批 DrawShapeItem
-	// 待实现：convertMaskToShapes(const QList<SegmentationMask>&)      -> 一批 DrawShapeItem
-	// 待实现：importCoco(const QString& jsonPath)  -> 一批 DrawShapeItem
-	// 待实现：exportCoco(const QList<DrawShapeItem>&, const QString& outPath) -> bool
-}

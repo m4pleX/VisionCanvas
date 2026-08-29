@@ -5,9 +5,14 @@
  * 核心功能：
  *   - detect(rgb)：对输入图像做灰度缺陷检测，返回 AlgorithmResult（缺陷框）
  *
- * 算法思路（面向 NEU-DET 等灰度钢材表面缺陷）：
- *   灰度化 → 高斯去噪 → 阈值分割(分离缺陷与背景) → 形态学去噪
- *   → findContours 提取连通域 → 按面积/尺寸过滤 → boundingRect 生成 DetectionBox
+ * 算法思路（面向"干净背景 + 明显亮/暗缺陷"的灰度图，验证链路可行）：
+ *   灰度化 → 高斯去噪 → inRange 双区间分割(暗缺陷 <80 / 亮缺陷 >180)
+ *   → 闭运算合并碎片 → findContours 提取连通域 → 面积/占图比过滤
+ *   → boundingRect 生成 DetectionBox
+ *
+ * 适用边界：本实现是"传统算法基线"，用于验证 AlgorithmResult 契约与上屏链路。
+ *   - 对均匀背景 + 明确灰度突变的缺陷有效（本方案）；
+ *   - 对复杂纹理缺陷（NEU-DET 划痕/裂纹等）非所长，应交给后续 YOLO/UNet 层。
  *
  * 设计约束：
  *   - 纯函数，接收 cv::Mat，返回 AlgorithmResult，不接触 Qt GUI/场景；

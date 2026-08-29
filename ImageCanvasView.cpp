@@ -1677,28 +1677,16 @@ void ImageCanvasView::clearDetectResultOverlay()
 	m_detectResultLabels.clear();
 }
 
-void ImageCanvasView::slotRunSimulateDetect()
+/*  将 m_detectModel 中的全部检测框渲染到叠加层（由数据驱动，而非手填 item） */
+void ImageCanvasView::renderDetectOverlay()
 {
-	// 校验：必须有已加载图像（默认像素图为 1280x960 占位，也允许检测）
-	const QPixmap pm = m_pixmapItem->pixmap();
-	const int imageW = pm.width();
-	const int imageH = pm.height();
-
-	// QPixmap -> QImage -> cv::Mat，喂给真实缺陷检测器
-	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
-	const cv::Mat img = CvImageConverter::toCvMat(qi);
-
-	AlgorithmResult result = GrayDefectDetector::detect(img);
-
-	// 清除旧检测叠层
 	clearDetectResultOverlay();
 
-	// 渲染新检测框：用独立图层，不污染 m_shapes / m_activeShape
 	QPen boxPen(QColor(255, 60, 60));
 	boxPen.setWidth(2);
 	boxPen.setCosmetic(true);
 
-	for (const DetectionBox& box : result.detections)
+	for (const DetectionBox& box : m_detectModel.allDetections())
 	{
 		QRectF r(box.cx - box.w / 2.0, box.cy - box.h / 2.0, box.w, box.h);
 		auto* rectItem = m_scene->addRect(r, boxPen, QBrush(Qt::NoBrush));
@@ -1713,6 +1701,25 @@ void ImageCanvasView::slotRunSimulateDetect()
 		labelItem->setZValue(86);
 		m_detectResultLabels.append(labelItem);
 	}
+}
+
+void ImageCanvasView::slotRunSimulateDetect()
+{
+	// 校验：必须有已加载图像（默认像素图为 1280x960 占位，也允许检测）
+	const QPixmap pm = m_pixmapItem->pixmap();
+	const int imageW = pm.width();
+	const int imageH = pm.height();
+
+	// QPixmap -> QImage -> cv::Mat，喂给真实缺陷检测器
+	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
+	const cv::Mat img = CvImageConverter::toCvMat(qi);
+
+	AlgorithmResult result = GrayDefectDetector::detect(img);
+
+	// 结果存入宿主（数据层），叠层渲染由 model 驱动
+	m_detectModel.clear();          // 本次运行视为一份新结果，替换旧结果
+	m_detectModel.addResult(result);
+	renderDetectOverlay();
 
 	// 反馈
 	ui.info_lab_resolution->setToolTip(QStringLiteral("检测到 %1 个目标").arg(result.detections.size()));

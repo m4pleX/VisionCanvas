@@ -24,6 +24,8 @@ add_executable(VisionCanvas
         AnnotationIO.h
         CvImageConverter.cpp
         CvImageConverter.h
+        DetectionResultModel.cpp
+        DetectionResultModel.h
         DrawShapeData.h
         GrayDefectDetector.cpp
         GrayDefectDetector.h
