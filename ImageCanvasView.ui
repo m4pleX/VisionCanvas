@@ -23,7 +23,7 @@
    <enum>Qt::NoFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>ImageCanvasView</string>
+   <string>VisionPlatform</string>
   </property>
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
@@ -506,7 +506,7 @@ QPushButton:pressed{
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <item>
-               <widget class="QPushButton" name="draw_btn_save_anno">
+               <widget class="QPushButton" name="draw_btn_save_recipe">
                 <property name="styleSheet">
                  <string notr="true">QPushButton{
     background-color: #ffffff;
@@ -527,12 +527,12 @@ QPushButton:pressed{
 </string>
                 </property>
                 <property name="text">
-                 <string>保存标注</string>
+                 <string>保存方案</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="draw_btn_load_anno">
+               <widget class="QPushButton" name="draw_btn_load_recipe">
                 <property name="styleSheet">
                  <string notr="true">QPushButton{
     background-color: #ffffff;
@@ -553,7 +553,7 @@ QPushButton:pressed{
 </string>
                 </property>
                 <property name="text">
-                 <string>加载标注</string>
+                 <string>加载方案</string>
                 </property>
                </widget>
               </item>

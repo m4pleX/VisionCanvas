@@ -20,8 +20,8 @@ find_package(OpenCV REQUIRED)
 
 add_executable(VisionPlatform
         AlgorithmResult.h
-        AnnotationIO.cpp
-        AnnotationIO.h
+        RecipeIO.cpp
+        RecipeIO.h
         CvImageConverter.cpp
         CvImageConverter.h
         DetectionResultModel.cpp

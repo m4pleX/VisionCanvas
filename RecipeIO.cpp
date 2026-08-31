@@ -1,4 +1,4 @@
-#include "AnnotationIO.h"
+#include "RecipeIO.h"
 
 #include <QJsonArray>
 
@@ -10,7 +10,7 @@ static const char* kTypeRing       = "ring";
 static const char* kTypeArc        = "arc";       /*  扇环 */
 static const char* kTypePolygon    = "polygon";
 
-QJsonObject AnnotationIO::shapeToJson(const DrawShapeItem& s)
+QJsonObject RecipeIO::shapeToJson(const DrawShapeItem& s)
 {
 	QJsonObject o;
 	switch (s.type)
@@ -67,7 +67,7 @@ QJsonObject AnnotationIO::shapeToJson(const DrawShapeItem& s)
 	return o;
 }
 
-DrawShapeItem* AnnotationIO::shapeFromJson(const QJsonObject& o)
+DrawShapeItem* RecipeIO::shapeFromJson(const QJsonObject& o)
 {
 	const QString type = o["type"].toString();
 	DrawShapeType t;

@@ -35,7 +35,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_ImageCanvasView.h"
 #include "DrawShapeData.h"
-#include "AnnotationIO.h"
+#include "RecipeIO.h"
 #include "ToolbarController.h"
 #include "DetectionResultModel.h"
 
@@ -79,8 +79,8 @@ private slots:
 	void slotToggleLineWidth();
 	void slotToggleControlPoints();
 	void slotLoadImage();
-	void slotSaveAnnotation();
-	void slotLoadAnnotation();
+	void slotSaveRecipe();
+	void slotLoadRecipe();
 	void slot_draw_shape_changed(int index);
 	void slotResetShape();
 	void slotOpenParamPanel();

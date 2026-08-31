@@ -114,8 +114,8 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.tool_btn_toggle_control_points, &QPushButton::clicked, this, &ImageCanvasView::slotToggleControlPoints);
 
 	connect(ui.draw_btn_load_image, &QPushButton::clicked, this, &ImageCanvasView::slotLoadImage);
-	connect(ui.draw_btn_save_anno, &QPushButton::clicked, this, &ImageCanvasView::slotSaveAnnotation);
-	connect(ui.draw_btn_load_anno, &QPushButton::clicked, this, &ImageCanvasView::slotLoadAnnotation);
+	connect(ui.draw_btn_save_recipe, &QPushButton::clicked, this, &ImageCanvasView::slotSaveRecipe);
+	connect(ui.draw_btn_load_recipe, &QPushButton::clicked, this, &ImageCanvasView::slotLoadRecipe);
 	connect(ui.draw_btn_run_detect, &QPushButton::clicked, this, &ImageCanvasView::slotRunDetect);
 	connect(ui.draw_cbox_shape_type, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 			this, &ImageCanvasView::slot_draw_shape_changed);
@@ -1068,30 +1068,30 @@ void ImageCanvasView::slotLoadImage()
 	m_imagePath = filePath;
 }
 
-// ===== 标注持久化（JSON） =====
+// ===== 方案持久化（JSON） =====
 
-void ImageCanvasView::slotSaveAnnotation()
+void ImageCanvasView::slotSaveRecipe()
 {
 	if (m_imagePath.isEmpty())
 	{
-		QMessageBox::warning(this, QStringLiteral("保存标注"), QStringLiteral("请先加载图片"));
+		QMessageBox::warning(this, QStringLiteral("保存方案"), QStringLiteral("请先加载图片"));
 		return;
 	}
 	if (m_shapes.isEmpty())
 	{
-		QMessageBox::information(this, QStringLiteral("保存标注"), QStringLiteral("当前没有可保存的图形"));
+		QMessageBox::information(this, QStringLiteral("保存方案"), QStringLiteral("当前没有可保存的图形"));
 		return;
 	}
 
 	QString defaultPath = QFileInfo(m_imagePath).absolutePath() + "/" +
 		QFileInfo(m_imagePath).completeBaseName() + ".json";
-	QString filePath = QFileDialog::getSaveFileName(this, QStringLiteral("保存标注"),
-		defaultPath, QStringLiteral("标注文件(*.json)"));
+	QString filePath = QFileDialog::getSaveFileName(this, QStringLiteral("保存方案"),
+		defaultPath, QStringLiteral("方案文件(*.json)"));
 	if (filePath.isEmpty()) return;
 
 	QJsonArray shapeArr;
 	for (const DrawShapeItem* s : m_shapes)
-		shapeArr.append(AnnotationIO::shapeToJson(*s));
+		shapeArr.append(RecipeIO::shapeToJson(*s));
 
 	QJsonObject sizeObj;
 	sizeObj["width"] = m_pixmapItem->pixmap().width();
@@ -1106,37 +1106,37 @@ void ImageCanvasView::slotSaveAnnotation()
 	QFile f(filePath);
 	if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
 	{
-		QMessageBox::warning(this, QStringLiteral("保存标注"), QStringLiteral("无法写入文件：%1").arg(filePath));
+		QMessageBox::warning(this, QStringLiteral("保存方案"), QStringLiteral("无法写入文件：%1").arg(filePath));
 		return;
 	}
 	f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
 	f.close();
-	QMessageBox::information(this, QStringLiteral("保存标注"),
-		QStringLiteral("已保存 %1 个图形标注").arg(m_shapes.size()));
+	QMessageBox::information(this, QStringLiteral("保存方案"),
+		QStringLiteral("已保存 %1 个几何方案").arg(m_shapes.size()));
 }
 
-void ImageCanvasView::slotLoadAnnotation()
+void ImageCanvasView::slotLoadRecipe()
 {
 	QString filePath = QFileDialog::getOpenFileName(this,
-		QStringLiteral("加载标注"), "", QStringLiteral("标注文件(*.json)"));
+		QStringLiteral("加载方案"), "", QStringLiteral("方案文件(*.json)"));
 	if (filePath.isEmpty()) return;
 
 	QFile f(filePath);
 	if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		QMessageBox::warning(this, QStringLiteral("加载标注"), QStringLiteral("无法打开文件：%1").arg(filePath));
+		QMessageBox::warning(this, QStringLiteral("加载方案"), QStringLiteral("无法打开文件：%1").arg(filePath));
 		return;
 	}
 	QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
 	f.close();
 	if (!doc.isObject())
 	{
-		QMessageBox::warning(this, QStringLiteral("加载标注"), QStringLiteral("标注文件格式无效"));
+		QMessageBox::warning(this, QStringLiteral("加载方案"), QStringLiteral("方案文件格式无效"));
 		return;
 	}
 	QJsonObject root = doc.object();
 
-	// 标注 schema 版本：旧文件可能缺失 version，默认按 v1 处理（向后兼容）
+	// 方案 schema 版本：旧文件可能缺失 version，默认按 v1 处理（向后兼容）
 	const int version = root["version"].toInt(1);
 	Q_UNUSED(version);   /*  当前仅 v1；未来 schema 演进时在此按 version 分派  */
 
@@ -1149,18 +1149,18 @@ void ImageCanvasView::slotLoadAnnotation()
 	}
 	if (imagePath.isEmpty() || !loadImageFromPath(imagePath))
 	{
-		QMessageBox::warning(this, QStringLiteral("加载标注"),
-			QStringLiteral("标注关联的图片不存在或无法加载：%1").arg(imagePath));
+		QMessageBox::warning(this, QStringLiteral("加载方案"),
+			QStringLiteral("方案关联的图片不存在或无法加载：%1").arg(imagePath));
 		return;
 	}
 	m_imagePath = imagePath;
 
-	// 重建标注数据
+	// 重建方案数据
 	clearAllShapes();
 	const QJsonArray shapeArr = root["shapes"].toArray();
 	for (const auto& v : shapeArr)
 	{
-		if (DrawShapeItem* s = AnnotationIO::shapeFromJson(v.toObject()))
+		if (DrawShapeItem* s = RecipeIO::shapeFromJson(v.toObject()))
 			m_shapes.append(s);
 	}
 
@@ -1171,8 +1171,8 @@ void ImageCanvasView::slotLoadAnnotation()
 	if (!toShow && !m_shapes.isEmpty()) toShow = m_shapes.first();
 	if (toShow) { m_activeShape = toShow; rebuildShapeOnScene(toShow); }
 
-	QMessageBox::information(this, QStringLiteral("加载标注"),
-		QStringLiteral("已加载 %1 个图形标注").arg(m_shapes.size()));
+	QMessageBox::information(this, QStringLiteral("加载方案"),
+		QStringLiteral("已加载 %1 个几何方案").arg(m_shapes.size()));
 }
 
 // ===== Combo box 切换 =====

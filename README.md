@@ -31,7 +31,7 @@
 | `ShapeHandleHelper` | 控制点编辑与形状交互 |
 | `ToolbarController` | 工具栏状态、缩放命令与 UI 文案联动 |
 | `ParamPanelWidget` | Schema 驱动参数面板，动态生成属性编辑 UI |
-| `AnnotationIO` | 几何数据 JSON 序列化 / 反序列化 |
+| `RecipeIO` | 方案数据 JSON 序列化 / 反序列化 |
 | `ImageCanvasView` | 主视图：场景管理、事件处理、图像加载与结果只读上屏 |
 
 ## 数据流
