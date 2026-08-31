@@ -1,6 +1,6 @@
 /*
  * 文件名：GrayDefectDetector.h
- * 职责：灰度表面缺陷检测器（真实 OpenCV 实现，替换第一阶段 SimulatorDetector 假数据）
+ * 职责：灰度表面缺陷检测器（OpenCV 真实实现）
  *
  * 核心功能：
  *   - detect(rgb)：对输入图像做灰度缺陷检测，返回 AlgorithmResult（缺陷框）

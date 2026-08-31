@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.4)
 set(CMAKE_PREFIX_PATH "D:/Qt/6.5.3/msvc2019_64")
-project(VisionCanvas)
+project(VisionPlatform)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -18,7 +18,7 @@ else()
 endif()
 find_package(OpenCV REQUIRED)
 
-add_executable(VisionCanvas
+add_executable(VisionPlatform
         AlgorithmResult.h
         AnnotationIO.cpp
         AnnotationIO.h
@@ -47,9 +47,7 @@ add_executable(VisionCanvas
         ShapeHandleHelper.h
         ShapePainter.cpp
         ShapePainter.h
-        SimulatorDetector.cpp
-        SimulatorDetector.h
         ToolbarController.cpp
         ToolbarController.h)
 
-target_link_libraries(VisionCanvas PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGLWidgets ${OpenCV_LIBS})
+target_link_libraries(VisionPlatform PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGLWidgets ${OpenCV_LIBS})

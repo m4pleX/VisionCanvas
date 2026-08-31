@@ -46,9 +46,9 @@ struct DrawShapeItem
 {
 	DrawShapeType type;
 
-	/*  ---- 业务元信息（与几何解耦，供多实例 / 算法类别 / 结果回填使用） ---- */
-	QString id;              /*  唯一标识；多实例化与算法结果回填的地基，缺失时由上层生成 */
-	QString label;           /*  业务标签：YOLO class 名 / UNet 类别 / 用户自定义语义 */
+	/*  ---- 业务元信息（与几何解耦，供多实例 / ROI 语义 / 算法类别标注使用） ---- */
+	QString id;              /*  唯一标识；多实例化的地基，缺失时由上层生成 */
+	QString label;           /*  业务标签：ROI 用途 / YOLO class 名 / 用户自定义语义 */
 	int     classId = -1;    /*  算法类别 id（-1 = 未分类） */
 
 	/*  ---- 统一几何字段（类型无关，按 type 决定有效性） ---- */

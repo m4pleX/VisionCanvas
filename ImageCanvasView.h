@@ -4,16 +4,19 @@
  *
  *  架构总览：
  *    ImageCanvasView (主交互调度层)
- *    +-- DrawShapeItem      形状数据模型（仅保存几何参数，不含图形渲染对象）
- *    +-- ShapePainter       形状绘制工具：创建QGraphicsItem、统一设置样式
- *    +-- ShapeHandleHelper  控制点管理器：控制点创建、更新、显隐控制
- *    +-- ParamPanelWidget   参数面板：动态生成UI、同步读写形状参数
- *    +-- ToolbarController  工具栏控制器：按钮状态、缩放信息联动
+ *    +-- DrawShapeItem          形状数据模型（输入几何：ROI / 基准线，不含渲染对象）
+ *    +-- ShapePainter           形状绘制工具：创建QGraphicsItem、统一设置样式
+ *    +-- ShapeHandleHelper      控制点管理器：控制点创建、更新、显隐控制
+ *    +-- ParamPanelWidget       参数面板：动态生成UI、同步读写形状参数
+ *    +-- ToolbarController      工具栏控制器：按钮状态、缩放信息联动
+ *    +-- DetectionResultModel   算法结果宿主（只读结果的多实例管理）
+ *    +-- GrayDefectDetector     算法引擎（OpenCV 灰度缺陷检测）
  *
  *  核心功能：
  *    - 画布场景管理、图像加载
- *    - 7类图形的交互式绘制流程
- *    - 图形编辑：拖拽控制点、旋转、平移、参数面板编辑
+ *    - 7类输入几何（ROI/基准）的交互式绘制流程
+ *    - 几何编辑：拖拽控制点、旋转、平移、参数面板编辑
+ *    - 算法结果只读上屏（独立叠层，不参与编辑）
  *
  *  交互事件流：
  *    eventFilter 捕获鼠标事件
@@ -99,7 +102,7 @@ private:
 	QGraphicsRectItem*    m_bgItem        = nullptr;
 	QGraphicsLineItem*    m_spotAbsorber  = nullptr;  /*  OpenGL 残影吸收线 */
 	double                m_scaleValue    = 1.0;
-	QString               m_imagePath;               /*  当前标注关联的图片路径 */
+	QString               m_imagePath;               /*  当前图像路径 */
 
 	bool m_showCenterCross = false;
 	bool m_showControlPoints = true;
@@ -127,7 +130,7 @@ private:
 	bool   m_isShapeHovered  = false;
 	bool   m_thinLine        = false;
 
-	/*  ====================== 检测结果（宿主 + 叠层，与标注数据隔离） ====================== */
+	/*  ====================== 检测结果（宿主 + 只读叠层） ====================== */
 	DetectionResultModel m_detectModel;                 /*  结果宿主：多结果/多实例的数据层 */
 	QList<QGraphicsRectItem*> m_detectResultItems;      /*  叠层：结果框 */
 	QList<QGraphicsSimpleTextItem*> m_detectResultLabels; /*  叠层：结果标签 */

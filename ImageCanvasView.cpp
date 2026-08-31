@@ -8,7 +8,6 @@
 #include "ShapeGeometry.h"
 #include "CvImageConverter.h"
 #include "GrayDefectDetector.h"
-#include "SimulatorDetector.h"
 
 #include <opencv2/core.hpp>
 
@@ -1667,7 +1666,7 @@ void ImageCanvasView::refreshActiveShape()
 	syncParamPanel(m_dragShape);
 }
 
-/* ===== 模拟检测（第一阶段：假数据验证算法结果契约与上屏链路） ===== */
+/* ===== 缺陷检测：运行算法，结果存入宿主并只读上屏 ===== */
 
 void ImageCanvasView::clearDetectResultOverlay()
 {
