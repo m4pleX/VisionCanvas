@@ -140,6 +140,10 @@ ImageCanvasView::~ImageCanvasView() {
 	delete m_toolbar;
 	qDeleteAll(m_shapes);
 	m_shapes.clear();
+	// 显式清理检测结果：数据层清空 + 渲染层销毁（removeItem + delete），
+	// 不依赖 m_scene 的隐式析构。此处 m_scene 仍存活（parent 为本类，子对象稍后才销毁）。
+	m_detectModel.clear();
+	clearDetectResultOverlay();
 }
 
 // ===== 事件处理 =====
@@ -1046,6 +1050,10 @@ bool ImageCanvasView::loadImageFromPath(const QString& path)
 	if (loadImg.isNull()) return false;
 	QPixmap pixmap = QPixmap::fromImage(loadImg);
 	m_pixmapItem->setPixmap(pixmap);
+	// 【销毁点】换图使旧图检测结果失效，清空数据层 + 渲染层。
+	// 覆盖 slotLoadImage（换图）与 slotLoadRecipe（加载方案）两个场景。
+	m_detectModel.clear();
+	clearDetectResultOverlay();
 	// 扩展 sceneRect，在图片外留出充足空间，避免中键拖拽时被限制在图片边界内
 	const qreal pad = 10000.0;
 	m_scene->setSceneRect(pixmap.rect().adjusted(-pad, -pad, pad, pad));
@@ -1668,6 +1676,11 @@ void ImageCanvasView::refreshActiveShape()
 
 /* ===== 缺陷检测：运行算法，结果存入宿主并只读上屏 ===== */
 
+/*  【检测结果渲染层唯一销毁入口】
+ *   removeItem(item) 与 delete item 必须成对：
+ *     只 delete 不 removeItem → scene 持悬垂指针；
+ *     只 removeItem 不 delete → 内存泄漏。
+ *   所有"检测结果失效"的场景（换图 / 加载方案 / 重跑 / 析构）都必须经由本函数。 */
 void ImageCanvasView::clearDetectResultOverlay()
 {
 	for (auto* item : m_detectResultItems) { m_scene->removeItem(item); delete item; }

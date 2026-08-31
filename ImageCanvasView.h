@@ -131,6 +131,11 @@ private:
 	bool   m_thinLine        = false;
 
 	/*  ====================== 检测结果（宿主 + 只读叠层） ====================== */
+	/*  【生命周期契约】
+	 *   - m_detectModel：值语义，销毁 = clear() 或随本类析构自动释放，禁止手动 delete 其内部数据。
+	 *   - m_detectResultItems / m_detectResultLabels：裸指针，所有权归 m_scene；
+	 *     销毁唯一入口 = clearDetectResultOverlay()（removeItem + delete 成对），
+	 *     禁止在其它位置裸 delete。 */
 	DetectionResultModel m_detectModel;                 /*  结果宿主：多结果/多实例的数据层 */
 	QList<QGraphicsRectItem*> m_detectResultItems;      /*  叠层：结果框 */
 	QList<QGraphicsSimpleTextItem*> m_detectResultLabels; /*  叠层：结果标签 */
