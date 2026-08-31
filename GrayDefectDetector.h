@@ -26,6 +26,20 @@ namespace cv { class Mat; }
 
 namespace GrayDefectDetector
 {
-	/*  灰度缺陷检测：返回缺陷框（label = "defect"，confidence 按面积归一化估算） */
-	AlgorithmResult detect(const cv::Mat& rgb);
+	/*  灰度缺陷检测的可调参数（面向"干净背景 + 明显亮/暗缺陷"） */
+	struct GrayDetectParams
+	{
+		int    darkLow        = 0;    /*  暗缺陷灰度下界 */
+		int    darkHigh       = 80;   /*  暗缺陷灰度上界（<此值判为暗缺陷） */
+		int    brightLow      = 180;  /*  亮缺陷灰度下界（>此值判为亮缺陷） */
+		int    brightHigh     = 255;  /*  亮缺陷灰度上界 */
+		int    mergeKernel    = 5;    /*  闭运算核尺寸：合并断续碎片 */
+		double minContourArea = 30.0; /*  最小轮廓面积（像素），过滤孤立噪声 */
+		double maxBoxRatio    = 0.4;  /*  检测框占整图比例上限，防背景整体误检 */
+		double confFullGain   = 120.0;/*  缺陷像素灰度偏离背景的量归一化用 */
+	};
+
+	/*  灰度缺陷检测：返回缺陷框（label = "defect"，confidence 按面积归一化估算）
+	 *  params 为可调阈值，缺省时使用默认参数（与历史硬编码行为一致） */
+	AlgorithmResult detect(const cv::Mat& rgb, const GrayDetectParams& params = GrayDetectParams());
 }

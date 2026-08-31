@@ -13,6 +13,11 @@ static const char* kTypePolygon    = "polygon";
 QJsonObject RecipeIO::shapeToJson(const DrawShapeItem& s)
 {
 	QJsonObject o;
+	// 业务元信息（id/label/classId）：统一写入，不随 type 分支变化；
+	// 供多实例标识 / ROI 语义 / 算法类别标注使用。
+	o["id"]      = s.id;
+	o["label"]   = s.label;
+	o["classId"] = s.classId;
 	switch (s.type)
 	{
 	case Shape_Rect:
@@ -81,6 +86,10 @@ DrawShapeItem* RecipeIO::shapeFromJson(const QJsonObject& o)
 	else return nullptr;
 
 	DrawShapeItem* s = new DrawShapeItem(t);
+	// 业务元信息：统一恢复（旧文件缺字段时用默认值兜底）
+	s->id      = o["id"].toString();
+	s->label   = o["label"].toString();
+	s->classId = o["classId"].toInt(-1);
 	switch (t)
 	{
 	case Shape_Rect:
@@ -126,4 +135,37 @@ DrawShapeItem* RecipeIO::shapeFromJson(const QJsonObject& o)
 		break;
 	}
 	return s;
+}
+
+QJsonObject RecipeIO::itemToJson(const InspectionItem& item)
+{
+	QJsonObject o;
+	o["id"]            = item.id;
+	o["name"]          = item.name;
+	o["algorithmType"] = item.algorithmType;
+
+	QJsonArray roiIds;
+	for (const QString& id : item.roiIds)
+		roiIds.append(id);
+	o["roiIds"] = roiIds;
+
+	o["params"]   = item.params;
+	o["passRule"] = item.passRule;
+	return o;
+}
+
+InspectionItem RecipeIO::itemFromJson(const QJsonObject& o)
+{
+	InspectionItem item;
+	item.id            = o["id"].toString();
+	item.name          = o["name"].toString();
+	item.algorithmType = o["algorithmType"].toString();
+
+	const QJsonArray roiIds = o["roiIds"].toArray();
+	for (const auto& v : roiIds)
+		item.roiIds.append(v.toString());
+
+	item.params   = o["params"].toObject();
+	item.passRule = o["passRule"].toObject();
+	return item;
 }

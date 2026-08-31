@@ -1724,7 +1724,9 @@ void ImageCanvasView::slotRunDetect()
 	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
 	const cv::Mat img = CvImageConverter::toCvMat(qi);
 
-	AlgorithmResult result = GrayDefectDetector::detect(img);
+	// 灰度缺陷检测参数：当前使用默认值；TODO: 后续从方案/检测项(itemList)读取参数
+	GrayDefectDetector::GrayDetectParams params;
+	AlgorithmResult result = GrayDefectDetector::detect(img, params);
 
 	// 结果存入宿主（数据层），叠层渲染由 model 驱动
 	m_detectModel.clear();          // 本次运行视为一份新结果，替换旧结果
