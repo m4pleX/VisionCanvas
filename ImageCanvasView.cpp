@@ -116,7 +116,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.draw_btn_load_image, &QPushButton::clicked, this, &ImageCanvasView::slotLoadImage);
 	connect(ui.draw_btn_save_anno, &QPushButton::clicked, this, &ImageCanvasView::slotSaveAnnotation);
 	connect(ui.draw_btn_load_anno, &QPushButton::clicked, this, &ImageCanvasView::slotLoadAnnotation);
-	connect(ui.draw_btn_run_detect, &QPushButton::clicked, this, &ImageCanvasView::slotRunSimulateDetect);
+	connect(ui.draw_btn_run_detect, &QPushButton::clicked, this, &ImageCanvasView::slotRunDetect);
 	connect(ui.draw_cbox_shape_type, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 			this, &ImageCanvasView::slot_draw_shape_changed);
 	connect(ui.btn_reset_rect, &QPushButton::clicked, this, &ImageCanvasView::slotResetShape);
@@ -1702,12 +1702,10 @@ void ImageCanvasView::renderDetectOverlay()
 	}
 }
 
-void ImageCanvasView::slotRunSimulateDetect()
+void ImageCanvasView::slotRunDetect()
 {
 	// 校验：必须有已加载图像（默认像素图为 1280x960 占位，也允许检测）
 	const QPixmap pm = m_pixmapItem->pixmap();
-	const int imageW = pm.width();
-	const int imageH = pm.height();
 
 	// QPixmap -> QImage -> cv::Mat，喂给真实缺陷检测器
 	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);

@@ -84,7 +84,7 @@ private slots:
 	void slot_draw_shape_changed(int index);
 	void slotResetShape();
 	void slotOpenParamPanel();
-	void slotRunSimulateDetect();
+	void slotRunDetect();
 
 private:
 	/*  ====================== UI 绑定 ====================== */
