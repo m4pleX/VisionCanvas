@@ -1726,9 +1726,38 @@ void ImageCanvasView::slotRunDetect()
 	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
 	const cv::Mat img = CvImageConverter::toCvMat(qi);
 
+	// ROI 裁剪：以当前选中 shape 作为检测区域（无选中/ROI 无效则回退整图）
+	cv::Mat sub;
+	QPoint roiOrigin(0, 0);   /*  ROI 子图相对整图的原点，用于结果坐标回贴 */
+	if (m_activeShape != nullptr)
+	{
+		QRect roi;
+		if (ShapeGeometry::cropRect(*m_activeShape, img.cols, img.rows, roi))
+		{
+			// clone() 深拷贝：与 img 完全隔离，检测器即便写输入也不波及原图
+			sub = img(cv::Rect(roi.x(), roi.y(), roi.width(), roi.height())).clone();
+			roiOrigin = QPoint(roi.x(), roi.y());
+		}
+		else
+		{
+			sub = img;
+		}
+	}
+	else
+	{
+		sub = img;
+	}
+
 	// 灰度缺陷检测参数：当前使用默认值；TODO: 后续从方案/检测项(itemList)读取参数
 	GrayDefectDetector::GrayDetectParams params;
-	AlgorithmResult result = GrayDefectDetector::detect(img, params);
+	AlgorithmResult result = GrayDefectDetector::detect(sub, params);
+
+	// 坐标回贴：子图局部坐标 + ROI 原点 = 整图坐标
+	for (DetectionBox& box : result.detections)
+	{
+		box.cx += roiOrigin.x();
+		box.cy += roiOrigin.y();
+	}
 
 	// 结果存入宿主（数据层），叠层渲染由 model 驱动
 	m_detectModel.clear();          // 本次运行视为一份新结果，替换旧结果

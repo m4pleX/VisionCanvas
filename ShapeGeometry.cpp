@@ -305,6 +305,35 @@ QRectF ShapeGeometry::boundingRect(const DrawShapeItem& shape)
 	}
 }
 
+bool ShapeGeometry::cropRect(const DrawShapeItem& shape, int imgW, int imgH, QRect& out)
+{
+	const QRectF b = boundingRect(shape);
+	if (b.width() <= 0 || b.height() <= 0)
+		return false;
+
+	// 四舍五入到整数像素
+	const int x = qRound(b.left());
+	const int y = qRound(b.top());
+	const int w = qRound(b.width());
+	const int h = qRound(b.height());
+
+	// 完全出界判定（在图像范围之外）
+	if (x >= imgW || y >= imgH || x + w <= 0 || y + h <= 0)
+		return false;
+
+	// 与 [0,imgW)x[0,imgH) 求交
+	const int x0 = std::max(x, 0);
+	const int y0 = std::max(y, 0);
+	const int x1 = std::min(x + w, imgW);
+	const int y1 = std::min(y + h, imgH);
+
+	if (x1 <= x0 || y1 <= y0)
+		return false;
+
+	out = QRect(x0, y0, x1 - x0, y1 - y0);
+	return true;
+}
+
 /* ===== 位姿校正（定位 → ROI 跟随） ===== */
 
 DrawShapeItem ShapeGeometry::applyPose(const DrawShapeItem& base, const Pose2D& pose, const QString& sourceToolId)

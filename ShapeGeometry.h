@@ -21,6 +21,7 @@
 
 #include <QPolygonF>
 #include <QPainterPath>
+#include <QRect>
 #include <QRectF>
 #include "DrawShapeData.h"
 
@@ -53,6 +54,12 @@ public:
 
 	/*  形状 -> 轴对齐外接框（服务目标检测框） */
 	static QRectF boundingRect(const DrawShapeItem& shape);
+
+	/*  形状 -> 轴对齐裁剪区域（整数像素），供"吃 ROI 子图"的检测链路用。
+	 *  语义：取 boundingRect 四舍五入到像素，再与 [0,imgW)x[0,imgH) 求交；
+	 *  出界 / 空区域返回 false（不产出 out）。
+	 *  只读：不修改 shape 任何字段。 */
+	static bool cropRect(const DrawShapeItem& shape, int imgW, int imgH, QRect& out);
 
 	/* ===== 位姿校正（定位 → ROI 跟随） ===== */
 
