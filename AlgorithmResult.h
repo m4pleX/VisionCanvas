@@ -21,6 +21,19 @@
  *   AlgorithmResult 与 DrawShapeItem 是两套【独立】数据，所有权分离，
  *   生命周期各自管理，不存在自动双向同步或显式互转。
  *
+ * ────────────────────────────────────────────────────────────────
+ * 【结果几何词汇表分工】——防止新人/未来自己搞错，务必遵守：
+ *   几何本体（点/直线/线段/圆弧/圆/椭圆/轮廓）→ 一律走 ResultGeom
+ *     （见 GeomPrimitive.h，值语义）；这是「线/点/轮廓」类几何的【唯一】载体。
+ *   标量测量值（长度/角度/距离/面积）→ 走 MeasureResult（仅 value 语义）。
+ *   检测框 / 分割掩膜 / 位姿 → 继续走 DetectionBox / SegmentationMask / PoseResult。
+ *   几何本体 与 标量测量值 不得互相兼职承载（MeasureResult 不装几何，
+ *     ResultGeom 不装标量值）。
+ *   迁移状态：MeasureResult 从未被任何工具真实填充过（预留结构），
+ *     后续一律用 ResultGeom 承载几何；MeasureResult 仅保留标量用途，
+ *     是否最终移除待「标量测量工具」落地时再定。
+ * ────────────────────────────────────────────────────────────────
+ *
  * 本文件是数据契约；具体引擎适配器在引入各引擎时按需落地。
  */
 #pragma once
@@ -30,6 +43,7 @@
 #include <QPolygonF>
 #include <QRectF>
 #include "DrawShapeData.h"
+#include "GeomPrimitive.h"
 
 /* ========================================================================
  *  通用引擎无关的结果表示：以"框 / 掩膜 / 测量"三类几何载体承载算法输出
@@ -54,12 +68,20 @@ struct SegmentationMask {
 	QPolygonF  contour;          /*  前景轮廓点环（图像坐标，闭合） */
 };
 
-/*  测量/定位结果（点、线段、圆等几何量） */
+/*  测量结果（标量测量值）：长度/角度/距离/面积等数值型产出。
+ *
+ *  ⚠ 语义标记（2026-09）：本结构只承载【标量测量值】。
+ *    几何本体（点/线/弧/圆/轮廓）【一律走 ResultGeom / GeomPrimitive】，
+ *    【禁止】再往本结构塞几何（points 仅作回显点集，不是几何本体）。
+ *    状态：预留结构，从未被任何工具真实填充；「标量测量工具」落地时
+ *    按需启用，是否保留 points 届时再定。
+ *  @see ResultGeom（几何本体载体）、GeomPrimitive
+ */
 struct MeasureResult {
 	int      classId = -1;
 	QString  label;
-	QPolygonF points;            /*  关键点序列：独点/两点线段/多点轨迹 */
-	double   value = 0;          /*  测量值（长度/角度/面积等） */
+	QPolygonF points;            /*  附带点集（回显用），非几何本体 */
+	double   value = 0;          /*  测量值（长度/角度/距离/面积） */
 };
 
 /*  定位结果载体：定位/匹配算法产出的位姿（Pose2D），供下游 ROI 校正/跟随。
@@ -89,10 +111,11 @@ public:
 	QString toolId;
 	QString resultId;   /*  结果唯一标识（多实例、多工具并存时用） */
 
-	/*  结果几何载体（四类可并存，代表一次处理的不同产出） */
+	/*  结果几何载体（多类可并存，代表一次处理的不同产出） */
 	QList<DetectionBox>     detections;
 	QList<SegmentationMask> masks;
-	QList<MeasureResult>    measures;
+	QList<ResultGeom>       geometry;    /*  ★线/点/弧/圆/轮廓 类几何的【唯一】载体（@see GeomPrimitive.h） */
+	QList<MeasureResult>    measures;    /*  仅标量测量值；几何一律走上面的 geometry，勿混用 */
 	QList<PoseResult>       poses;      /*  定位类结果：位姿（供下游 ROI 校正/跟随） */
 
 	/*  源图引用（用于结果叠加回显与坐标换算） */

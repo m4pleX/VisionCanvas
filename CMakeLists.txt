@@ -30,6 +30,7 @@ add_executable(VisionPlatform
         DrawShapeData.h
         GrayDefectDetector.cpp
         GrayDefectDetector.h
+        GeomPrimitive.h
         ImageCanvasView.cpp
         ImageCanvasView.h
         ImageCanvasView.qrc
