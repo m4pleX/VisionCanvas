@@ -20,6 +20,8 @@ find_package(OpenCV REQUIRED)
 
 add_executable(VisionPlatform
         AlgorithmResult.h
+        CaliperDetector.cpp
+        CaliperDetector.h
         InspectionItem.h
         RecipeIO.cpp
         RecipeIO.h

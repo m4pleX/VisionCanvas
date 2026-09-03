@@ -9,6 +9,7 @@
 #include "CvImageConverter.h"
 #include "GrayDefectDetector.h"
 #include "PoseLocator.h"
+#include "CaliperDetector.h"
 
 #include <opencv2/core.hpp>
 
@@ -119,6 +120,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.draw_btn_load_recipe, &QPushButton::clicked, this, &ImageCanvasView::slotLoadRecipe);
 	connect(ui.draw_btn_run_detect, &QPushButton::clicked, this, &ImageCanvasView::slotRunDetect);
 	connect(ui.draw_btn_run_locate, &QPushButton::clicked, this, &ImageCanvasView::slotRunLocate);
+	connect(ui.draw_btn_run_caliper, &QPushButton::clicked, this, &ImageCanvasView::slotRunCaliper);
 	connect(ui.draw_cbox_shape_type, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 			this, &ImageCanvasView::slot_draw_shape_changed);
 	connect(ui.btn_reset_rect, &QPushButton::clicked, this, &ImageCanvasView::slotResetShape);
@@ -1832,4 +1834,98 @@ void ImageCanvasView::slotRunLocate()
 			.arg(pose.tx).arg(pose.ty)
 			.arg(qRadiansToDegrees(pose.angle))
 			.arg(pose.score));
+}
+
+void ImageCanvasView::clearCaliperResultOverlay()
+{
+	for (auto* item : m_caliperResultItems) { m_scene->removeItem(item); delete item; }
+	m_caliperResultItems.clear();
+}
+
+void ImageCanvasView::slotRunCaliper()
+{
+	// 临时验证入口：以图像中部构造一个竖直卡尺框（长轴竖直、搜索方向水平），
+	// 检测图中的竖直线边缘，画出拟合直线 + 边缘散点。
+	const QPixmap pm = m_pixmapItem->pixmap();
+	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
+	const cv::Mat img = CvImageConverter::toCvMat(qi);
+
+	const double cx = img.cols / 2.0;
+	// 卡尺框长轴：竖直方向，从 (cx, cy0) 到 (cx, cy1)，覆盖图像中部 80%
+	const double cy0 = img.rows * 0.1;
+	const double cy1 = img.rows * 0.9;
+
+	CaliperDetector::CaliperParams params;   /*  默认参数 */
+	AlgorithmResult result = CaliperDetector::findLine(img,
+		cv::Point2f(static_cast<float>(cx), static_cast<float>(cy0)),
+		cv::Point2f(static_cast<float>(cx), static_cast<float>(cy1)),
+		params);
+
+	clearCaliperResultOverlay();
+
+	// 画卡尺框（供参考）
+	QPen boxPen(QColor(0, 120, 255));
+	boxPen.setWidth(1);
+	boxPen.setCosmetic(true);
+	boxPen.setStyle(Qt::DashLine);
+
+	// 卡尺框 = 长轴两侧 ±projectionLen 的矩形
+	const double halfL = params.projectionLen;
+	QPolygonF caliperBox;
+	caliperBox << QPointF(cx - halfL, cy0) << QPointF(cx + halfL, cy0)
+	           << QPointF(cx + halfL, cy1) << QPointF(cx - halfL, cy1);
+	auto* boxItem = m_scene->addPolygon(caliperBox, boxPen, QBrush(Qt::NoBrush));
+	boxItem->setZValue(87);
+	m_caliperResultItems.append(boxItem);
+
+	if (result.geometry.isEmpty())
+	{
+		QMessageBox::information(this, QStringLiteral("卡尺"),
+			QStringLiteral("未拟合到直线（geometry 为空）"));
+		return;
+	}
+
+	// 画拟合直线（Geom_Segment）
+	QPen linePen(QColor(255, 60, 60));
+	linePen.setWidth(2);
+	linePen.setCosmetic(true);
+
+	double lineScore = 0.0;
+	bool hasLine = false;
+	QPolygonF edgePts;
+
+	for (const ResultGeom& g : result.geometry)
+	{
+		if (g.geom.type == Geom_Segment)
+		{
+			auto* ln = m_scene->addLine(
+				QLineF(QPointF(g.geom.cx, g.geom.cy), QPointF(g.geom.ex, g.geom.ey)), linePen);
+			ln->setZValue(88);
+			m_caliperResultItems.append(ln);
+			lineScore = g.score;
+			hasLine = true;
+		}
+		else if (g.geom.type == Geom_Contour)
+		{
+			// 边缘散点：画小十字
+			QPen ptPen(QColor(0, 170, 90));
+			ptPen.setWidth(1);
+			ptPen.setCosmetic(true);
+			const int n = g.geom.contour.size();
+			for (int i = 0; i < n; ++i)
+			{
+				const QPointF& p = g.geom.contour.at(i);
+				auto* ph = m_scene->addLine(QLineF(p.x() - 3, p.y(), p.x() + 3, p.y()), ptPen);
+				auto* pv = m_scene->addLine(QLineF(p.x(), p.y() - 3, p.x(), p.y() + 3), ptPen);
+				ph->setZValue(88); pv->setZValue(88);
+				m_caliperResultItems.append(ph);
+				m_caliperResultItems.append(pv);
+			}
+		}
+	}
+
+	QString msg = hasLine
+		? QStringLiteral("卡尺拟合完成：直线 score=%.2f").arg(lineScore)
+		: QStringLiteral("卡尺拟合完成：无直线（仅散点）");
+	QMessageBox::information(this, QStringLiteral("卡尺"), msg);
 }

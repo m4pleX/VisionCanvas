@@ -86,6 +86,7 @@ private slots:
 	void slotOpenParamPanel();
 	void slotRunDetect();
 	void slotRunLocate();
+	void slotRunCaliper();
 
 private:
 	/*  ====================== UI 绑定 ====================== */
@@ -227,4 +228,9 @@ private:
 	QList<QGraphicsItem*> m_locateResultItems;
 	/*  清除定位结果叠层 */
 	void clearLocateResultOverlay();
+
+	/*  卡尺结果叠层（临时验证用） */
+	QList<QGraphicsItem*> m_caliperResultItems;
+	/*  清除卡尺结果叠层 */
+	void clearCaliperResultOverlay();
 };

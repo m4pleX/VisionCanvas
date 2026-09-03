@@ -710,6 +710,32 @@ QPushButton:pressed{
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="draw_btn_run_caliper">
+              <property name="styleSheet">
+               <string notr="true">QPushButton{
+    background-color: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    min-height: 30px;
+    font-size: 14px;
+    color: #1d2939;
+}
+QPushButton:hover{
+    background-color: #eff8ff;
+    border-color: #84b6f4;
+}
+QPushButton:pressed{
+    background-color: #d0e7ff;
+    border-color: #4096ee;
+}
+</string>
+              </property>
+              <property name="text">
+               <string>卡尺</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="btn_reset_rect">
               <property name="styleSheet">
                <string notr="true">QPushButton{
