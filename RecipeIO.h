@@ -9,7 +9,7 @@
  *
  *  JSON schema 契约（稳定序列化协议，供算法层 import/export）：
  *    文件级 root: { "version": int(当前=1，旧文件可缺省按1处理), "imagePath", "imageSize": {width,height}, "shapes": [...] }
- *    形状级: { "type", "id", "label", "classId", 以及与 shape type 对应的几何字段键 }
+ *    形状级: { "type", "id", "label", "classId", "sourceToolId"(可选), 以及与 shape type 对应的几何字段键 }
  *    常见形状键: rect/rotatedRect/circle/ellipse/ring 用 cx,cy,w,h,r,r1,r2,angle；
  *                arc 用 cx,cy,rOuter,rInner,startAngle,endAngle,span；
  *                polygon 用 points(点数组)。

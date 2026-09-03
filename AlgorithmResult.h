@@ -29,6 +29,7 @@
 #include <QList>
 #include <QPolygonF>
 #include <QRectF>
+#include "DrawShapeData.h"
 
 /* ========================================================================
  *  通用引擎无关的结果表示：以"框 / 掩膜 / 测量"三类几何载体承载算法输出
@@ -61,6 +62,14 @@ struct MeasureResult {
 	double   value = 0;          /*  测量值（长度/角度/面积等） */
 };
 
+/*  定位结果载体：定位/匹配算法产出的位姿（Pose2D），供下游 ROI 校正/跟随。
+ *  与 DetectionBox / SegmentationMask / MeasureResult 平级，代表「定位类」算法的只读输出。 */
+struct PoseResult {
+	int    classId = -1;
+	QString label;
+	Pose2D pose;
+};
+
 /* ========================================================================
  *  算法结果容器：一次算法处理的完整输出集合（只读，与输入几何隔离）
  *
@@ -80,10 +89,11 @@ public:
 	QString toolId;
 	QString resultId;   /*  结果唯一标识（多实例、多工具并存时用） */
 
-	/*  结果几何载体（三类可并存，代表一次处理的不同产出） */
+	/*  结果几何载体（四类可并存，代表一次处理的不同产出） */
 	QList<DetectionBox>     detections;
 	QList<SegmentationMask> masks;
 	QList<MeasureResult>    measures;
+	QList<PoseResult>       poses;      /*  定位类结果：位姿（供下游 ROI 校正/跟随） */
 
 	/*  源图引用（用于结果叠加回显与坐标换算） */
 	QString sourceImagePath;

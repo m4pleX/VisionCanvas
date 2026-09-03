@@ -41,6 +41,28 @@ struct ShapeDragRect
 	double cx = 0, cy = 0, w = 0, h = 0;
 };
 
+/*  2D 位姿：定位/匹配算法的标准输出，用于后续 ROI 跟随校正。
+ *
+ *  单位约定：
+ *    - angle 使用【弧度 radians】，与 HALCON / VisionPro 的位姿/变换数据一致，
+ *      便于直接参与旋转矩阵运算（cos/sin 天然吃弧度）；
+ *    - DrawShapeItem 的 angle / startAngle / span 仍使用【度】，供 UI 展示与编辑；
+ *      单位换算只发生在「位姿 → ROI 校正」的边界处。
+ *
+ *  字段语义：
+ *    tx/ty  平移分量（图像像素坐标）
+ *    angle  旋转角（弧度）
+ *    scale  均匀缩放（1.0 = 原尺寸；模板匹配可能非 1）
+ *    score  定位置信度 / 匹配分数（0~1），供下游按精度过滤或选择基准 ROI */
+struct Pose2D
+{
+	double tx    = 0.0;   /*  平移 X（图像坐标，像素） */
+	double ty    = 0.0;   /*  平移 Y */
+	double angle = 0.0;   /*  旋转角（弧度，radians） */
+	double scale = 1.0;   /*  均匀缩放 */
+	double score = 0.0;   /*  定位置信度（0~1） */
+};
+
 // 纯几何数据，不包含任何 QGraphicsItem 句柄
 struct DrawShapeItem
 {
@@ -50,6 +72,7 @@ struct DrawShapeItem
 	QString id;              /*  唯一标识；多实例化的地基，缺失时由上层生成 */
 	QString label;           /*  业务标签：ROI 用途 / YOLO class 名 / 用户自定义语义 */
 	int     classId = -1;    /*  算法类别 id（-1 = 未分类） */
+	QString sourceToolId;    /*  ROI 来源：空 = 人工绘制；非空 = 由该定位工具（id）校正生成 */
 
 	/*  ---- 统一几何字段（类型无关，按 type 决定有效性） ---- */
 	double cx = 0, cy = 0;        /*  中心点 */

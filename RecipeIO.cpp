@@ -13,11 +13,14 @@ static const char* kTypePolygon    = "polygon";
 QJsonObject RecipeIO::shapeToJson(const DrawShapeItem& s)
 {
 	QJsonObject o;
-	// 业务元信息（id/label/classId）：统一写入，不随 type 分支变化；
+	// 业务元信息（id/label/classId/sourceToolId）：统一写入，不随 type 分支变化；
 	// 供多实例标识 / ROI 语义 / 算法类别标注使用。
+	// sourceToolId：ROI 来源标记（空=人工绘制；非空=该定位工具 id 生成），空串不写键以保持旧格式简洁。
 	o["id"]      = s.id;
 	o["label"]   = s.label;
 	o["classId"] = s.classId;
+	if (!s.sourceToolId.isEmpty())
+		o["sourceToolId"] = s.sourceToolId;
 	switch (s.type)
 	{
 	case Shape_Rect:
@@ -90,6 +93,7 @@ DrawShapeItem* RecipeIO::shapeFromJson(const QJsonObject& o)
 	s->id      = o["id"].toString();
 	s->label   = o["label"].toString();
 	s->classId = o["classId"].toInt(-1);
+	s->sourceToolId = o["sourceToolId"].toString();
 	switch (t)
 	{
 	case Shape_Rect:

@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+## VisionPlatform (项目自定义)
+# IDE 目录
+.idea/
+.codebuddy/
+# CMake 构建产物
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
