@@ -8,6 +8,7 @@
 #include "ShapeGeometry.h"
 #include "CvImageConverter.h"
 #include "GrayDefectDetector.h"
+#include "PoseLocator.h"
 
 #include <opencv2/core.hpp>
 
@@ -117,6 +118,7 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 	connect(ui.draw_btn_save_recipe, &QPushButton::clicked, this, &ImageCanvasView::slotSaveRecipe);
 	connect(ui.draw_btn_load_recipe, &QPushButton::clicked, this, &ImageCanvasView::slotLoadRecipe);
 	connect(ui.draw_btn_run_detect, &QPushButton::clicked, this, &ImageCanvasView::slotRunDetect);
+	connect(ui.draw_btn_run_locate, &QPushButton::clicked, this, &ImageCanvasView::slotRunLocate);
 	connect(ui.draw_cbox_shape_type, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 			this, &ImageCanvasView::slot_draw_shape_changed);
 	connect(ui.btn_reset_rect, &QPushButton::clicked, this, &ImageCanvasView::slotResetShape);
@@ -1737,4 +1739,68 @@ void ImageCanvasView::slotRunDetect()
 	ui.info_lab_resolution->setToolTip(QStringLiteral("检测到 %1 个目标").arg(result.detections.size()));
 	QMessageBox::information(this, QStringLiteral("运行检测"),
 		QStringLiteral("缺陷检测完成：%1 个缺陷区域").arg(result.detections.size()));
+}
+
+void ImageCanvasView::clearLocateResultOverlay()
+{
+	for (auto* item : m_locateResultItems) { m_scene->removeItem(item); delete item; }
+	m_locateResultItems.clear();
+}
+
+void ImageCanvasView::slotRunLocate()
+{
+	// 临时验证入口：喂图 → 定位 → 画出 Pose2D（中心十字 + 角度方向线）
+	const QPixmap pm = m_pixmapItem->pixmap();
+	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
+	const cv::Mat img = CvImageConverter::toCvMat(qi);
+
+	AlgorithmResult result = PoseLocator::locate(img);
+
+	clearLocateResultOverlay();
+
+	if (result.poses.isEmpty())
+	{
+		QMessageBox::information(this, QStringLiteral("定位"),
+			QStringLiteral("未找到有效目标（poses 为空）"));
+		return;
+	}
+
+	const Pose2D& pose = result.poses.first().pose;
+
+	// 中心十字
+	QPen pen(QColor(0, 170, 90));
+	pen.setWidth(2);
+	pen.setCosmetic(true);
+	const double cs = 12.0;
+	QLineF lineH(pose.tx - cs, pose.ty, pose.tx + cs, pose.ty);
+	QLineF lineV(pose.tx, pose.ty - cs, pose.tx, pose.ty + cs);
+	auto* h = m_scene->addLine(lineH, pen);
+	auto* v = m_scene->addLine(lineV, pen);
+	h->setZValue(87); v->setZValue(87);
+	m_locateResultItems.append(h);
+	m_locateResultItems.append(v);
+
+	// 角度方向线（长度随 score 放大，指向 minAreaRect 旋转角方向）
+	const double len = 60.0;
+	const QPointF dir = QPointF(pose.tx + len * qCos(pose.angle), pose.ty + len * qSin(pose.angle));
+	auto* dLine = m_scene->addLine(QLineF(QPointF(pose.tx, pose.ty), dir), pen);
+	dLine->setZValue(87);
+	m_locateResultItems.append(dLine);
+
+	// 标签
+	auto* label = m_scene->addSimpleText(
+		QStringLiteral("blob (%.1f, %.1f) %%.2f° score=%.2f")
+			.arg(pose.tx).arg(pose.ty)
+			.arg(qRadiansToDegrees(pose.angle))
+			.arg(pose.score));
+	label->setPos(pose.tx + 8, pose.ty + 8);
+	label->setBrush(QBrush(QColor(0, 170, 90)));
+	label->setZValue(88);
+	m_locateResultItems.append(label);
+
+	QMessageBox::information(this, QStringLiteral("定位"),
+		QStringLiteral("定位完成：中心 (%.1f, %.1f)，角度 %.2f°，score %.2f")
+			.arg(pose.tx).arg(pose.ty)
+			.arg(qRadiansToDegrees(pose.angle))
+			.arg(pose.score));
 }

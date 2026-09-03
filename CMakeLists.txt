@@ -39,6 +39,8 @@ add_executable(VisionPlatform
         ParamPanelWidget.h
         ParamFieldFactory.cpp
         ParamFieldFactory.h
+        PoseLocator.cpp
+        PoseLocator.h
         ScaleConfig.h
         ShapeGeometry.cpp
         ShapeGeometry.h

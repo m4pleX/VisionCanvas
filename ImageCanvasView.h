@@ -85,6 +85,7 @@ private slots:
 	void slotResetShape();
 	void slotOpenParamPanel();
 	void slotRunDetect();
+	void slotRunLocate();
 
 private:
 	/*  ====================== UI 绑定 ====================== */
@@ -221,4 +222,9 @@ private:
 	void clearDetectResultOverlay();
 	/*  由 m_detectModel 驱动渲染检测叠层 */
 	void renderDetectOverlay();
+
+	/*  定位结果叠层（临时验证用，独立于检测叠层） */
+	QList<QGraphicsItem*> m_locateResultItems;
+	/*  清除定位结果叠层 */
+	void clearLocateResultOverlay();
 };
