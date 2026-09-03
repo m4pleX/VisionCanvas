@@ -304,3 +304,70 @@ QRectF ShapeGeometry::boundingRect(const DrawShapeItem& shape)
 		return QRectF();
 	}
 }
+
+/* ===== 位姿校正（定位 → ROI 跟随） ===== */
+
+DrawShapeItem ShapeGeometry::applyPose(const DrawShapeItem& base, const Pose2D& pose, const QString& sourceToolId)
+{
+	DrawShapeItem out = base;               /*  值拷贝：新 ROI 不修改基准 */
+	out.sourceToolId = sourceToolId;        /*  来源标记：该 ROI 由定位工具校正生成 */
+
+	const double s   = pose.scale;
+	const double rad = pose.angle;          /*  弧度 */
+	const double c   = qCos(rad);
+	const double sn  = qSin(rad);
+
+	/*  点变换：P' = scale · R(angle) · P + T（先旋转缩放、再平移） */
+	auto transformPt = [&](const QPointF& p) -> QPointF
+	{
+		const double x = p.x(), y = p.y();
+		const double rx = (x * c - y * sn) * s;
+		const double ry = (x * sn + y * c) * s;
+		return QPointF(rx + pose.tx, ry + pose.ty);
+	};
+
+	switch (base.type)
+	{
+	case Shape_Rect:
+	case Shape_Circle:
+	case Shape_Ring:
+	{
+		/*  无角度形状：仅中心点随位姿平移/旋转/缩放 */
+		QPointF c2 = transformPt(QPointF(base.cx, base.cy));
+		out.cx = c2.x(); out.cy = c2.y();
+		out.w  = base.w  * s; out.h = base.h  * s;   /*  缩放尺寸 */
+		out.r  = base.r  * s; out.r2 = base.r2 * s;
+		break;
+	}
+	case Shape_RotateRect:
+	case Shape_Ellipse:
+	{
+		QPointF c2 = transformPt(QPointF(base.cx, base.cy));
+		out.cx = c2.x(); out.cy = c2.y();
+		out.w  = base.w  * s; out.h  = base.h  * s;
+		out.r  = base.r  * s; out.r2 = base.r2 * s;
+		/*  角度叠加：工件转多少(弧度转度)，形状角度也加多少 */
+		out.angle = base.angle + qRadiansToDegrees(rad);
+		break;
+	}
+	case Shape_Arc:
+	{
+		QPointF c2 = transformPt(QPointF(base.cx, base.cy));
+		out.cx = c2.x(); out.cy = c2.y();
+		out.r  = base.r  * s; out.r2 = base.r2 * s;
+		out.startAngle = base.startAngle + qRadiansToDegrees(rad);
+		out.endAngle   = base.endAngle   + qRadiansToDegrees(rad);
+		break;
+	}
+	case Shape_Polygon:
+	{
+		out.pts.clear();
+		for (const QPointF& p : base.pts)
+			out.pts.append(transformPt(p));
+		break;
+	}
+	default:
+		break;
+	}
+	return out;
+}

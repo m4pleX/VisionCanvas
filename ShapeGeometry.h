@@ -53,4 +53,16 @@ public:
 
 	/*  形状 -> 轴对齐外接框（服务目标检测框） */
 	static QRectF boundingRect(const DrawShapeItem& shape);
+
+	/* ===== 位姿校正（定位 → ROI 跟随） ===== */
+
+	/*  位姿校正：将基准 ROI 按位姿（平移+旋转+缩放）生成跟随工件的新 ROI。
+	 *  语义（对齐 OpenCV getRotationMatrix2D / VisionPro CogFixtureTool）：
+	 *    P' = scale · R(angle) · P + T
+	 *    - 旋转 angle 逆时针为正（弧度），先旋转/缩放、再平移；
+	 *    - 形状含角度的字段（RotateRect/Ellipse 的 angle、Arc 的 startAngle）
+	 *      在原有角度上叠加 pose.angle（弧度转度），体现"工件转多少 ROI 转多少"；
+	 *    - 尺寸字段（w/h/r/r2）乘以 scale（工件缩放）；
+	 *    - 返回值是【新 ROI】（值拷贝，不修改 base），并打上 sourceToolId 来源标记。 */
+	static DrawShapeItem applyPose(const DrawShapeItem& base, const Pose2D& pose, const QString& sourceToolId);
 };
