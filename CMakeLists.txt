@@ -54,6 +54,9 @@ add_executable(VisionPlatform
         ShapePainter.cpp
         ShapePainter.h
         ToolbarController.cpp
-        ToolbarController.h)
+        ToolbarController.h
+        ToolDefinition.h
+        ToolRegistry.cpp
+        ToolRegistry.h)
 
 target_link_libraries(VisionPlatform PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGLWidgets ${OpenCV_LIBS})
