@@ -56,7 +56,8 @@ add_executable(VisionPlatform
         ToolbarController.cpp
         ToolbarController.h
         ToolDefinition.h
-        ToolRegistry.cpp
-        ToolRegistry.h)
+        VisionTools.cpp
+        VisionTools.h
+        ITool.h)
 
 target_link_libraries(VisionPlatform PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGLWidgets ${OpenCV_LIBS})

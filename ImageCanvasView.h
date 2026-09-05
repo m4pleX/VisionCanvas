@@ -38,7 +38,10 @@
 #include "RecipeIO.h"
 #include "ToolbarController.h"
 #include "DetectionResultModel.h"
+#include "ITool.h"
 
+class QDockWidget;
+class QTreeWidget;
 class QGraphicsEllipseItem;
 class QGraphicsItem;
 class QGraphicsLineItem;
@@ -87,6 +90,7 @@ private slots:
 	void slotRunDetect();
 	void slotRunLocate();
 	void slotRunCaliper();
+	void slotRunFlow();
 
 private:
 	/*  ====================== UI 绑定 ====================== */
@@ -233,4 +237,14 @@ private:
 	QList<QGraphicsItem*> m_caliperResultItems;
 	/*  清除卡尺结果叠层 */
 	void clearCaliperResultOverlay();
+
+	/*  ====================== 流程编排（流程树 Dock） ====================== */
+	QDockWidget* m_flowDock   = nullptr;   /*  流程树停靠面板 */
+	QTreeWidget* m_flowTree   = nullptr;   /*  流程树（可拖拽排序） */
+	QPushButton* m_btnRunFlow = nullptr;   /*  运行流程按钮 */
+
+	/*  初始化流程树 Dock（构造末尾调用） */
+	void setupFlowDock();
+	/*  从流程树读取当前顺序，构造 ToolStep 列表 */
+	QList<ToolStep> collectSteps() const;
 };

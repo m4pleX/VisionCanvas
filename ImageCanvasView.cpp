@@ -10,8 +10,10 @@
 #include "GrayDefectDetector.h"
 #include "PoseLocator.h"
 #include "CaliperDetector.h"
+#include "VisionTools.h"
 
 #include <opencv2/core.hpp>
+#include <memory>
 
 #include <QtAlgorithms>
 #include <QFile>
@@ -24,6 +26,9 @@
 #include <QDoubleSpinBox>
 #include <QOpenGLWidget>
 #include <QScrollArea>
+#include <QDockWidget>
+#include <QTreeWidget>
+#include <QDebug>
 
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
@@ -135,6 +140,9 @@ ImageCanvasView::ImageCanvasView(QWidget* parent)
 
 	// 延迟执行 fit，确保窗口布局完成、viewport 尺寸已确定
 	QTimer::singleShot(0, this, [this]() { slotZoomFit(); });
+
+	// 流程编排：左侧流程树 Dock（最小侵入，不在 .ui 加东西）
+	setupFlowDock();
 }
 
 ImageCanvasView::~ImageCanvasView() {
@@ -1928,4 +1936,111 @@ void ImageCanvasView::slotRunCaliper()
 		? QStringLiteral("卡尺拟合完成：直线 score=%.2f").arg(lineScore)
 		: QStringLiteral("卡尺拟合完成：无直线（仅散点）");
 	QMessageBox::information(this, QStringLiteral("卡尺"), msg);
+}
+
+void ImageCanvasView::setupFlowDock()
+{
+	// 左侧流程树 Dock：可拖拽排序的 QTreeWidget + 底部「运行流程」按钮
+	m_flowTree = new QTreeWidget();
+	m_flowTree->setHeaderHidden(true);
+	m_flowTree->setDragDropMode(QAbstractItemView::InternalMove);   // 可拖拽排序
+	m_flowTree->setSelectionMode(QAbstractItemView::SingleSelection);
+
+	// 默认流程：先只放「检测」一步（最小有意义任务）。
+	// 定位/卡尺对图的要求与检测互相矛盾，不同时套入默认流程；
+	// 用户可按需通过后续的「增删工具」扩展。
+	auto addTool = [this](ToolCategory cat, const QString& algo, const QString& display) {
+		QTreeWidgetItem* item = new QTreeWidgetItem();
+		item->setText(0, QStringLiteral("%1 · %2").arg(toolCategoryName(cat), display));
+		item->setData(0, Qt::UserRole, algo);           // 算法 tag
+		item->setData(0, Qt::UserRole + 1, static_cast<int>(cat)); // 大类
+		item->setFlags(item->flags() | Qt::ItemIsDragEnabled);
+		m_flowTree->addTopLevelItem(item);
+	};
+
+	addTool(Category_Inspect, "grayDefect", QStringLiteral("灰度缺陷检测"));
+
+	m_btnRunFlow = new QPushButton(QStringLiteral("运行流程"));
+
+	QWidget* host = new QWidget();
+	QVBoxLayout* lay = new QVBoxLayout(host);
+	lay->setContentsMargins(4, 4, 4, 4);
+	lay->addWidget(m_flowTree, 1);
+	lay->addWidget(m_btnRunFlow, 0);
+
+	m_flowDock = new QDockWidget(QStringLiteral("流程"), this);
+	m_flowDock->setObjectName("flowDock");
+	m_flowDock->setWidget(host);
+	m_flowDock->setMinimumWidth(260);
+	addDockWidget(Qt::LeftDockWidgetArea, m_flowDock);
+
+	connect(m_btnRunFlow, &QPushButton::clicked, this, &ImageCanvasView::slotRunFlow);
+}
+
+QList<ToolStep> ImageCanvasView::collectSteps() const
+{
+	QList<ToolStep> steps;
+	if (!m_flowTree)
+		return steps;
+
+	const int n = m_flowTree->topLevelItemCount();
+	for (int i = 0; i < n; ++i)
+	{
+		QTreeWidgetItem* item = m_flowTree->topLevelItem(i);
+		ToolStep step;
+		step.algorithm = item->data(0, Qt::UserRole).toString();
+		step.category  = static_cast<ToolCategory>(item->data(0, Qt::UserRole + 1).toInt());
+		step.id        = step.algorithm + QString::number(i);
+		steps.append(step);
+	}
+	return steps;
+}
+
+void ImageCanvasView::slotRunFlow()
+{
+	const QPixmap pm = m_pixmapItem->pixmap();
+	const QImage qi = pm.toImage().convertToFormat(QImage::Format_RGB888);
+
+	// 图像句柄：shared_ptr<const cv::Mat>，只读引用贯穿（零拷贝，不复制像素）
+	auto imageMat = std::make_shared<cv::Mat>(CvImageConverter::toCvMat(qi));
+
+	// 只读上下文：图 + 用户几何（空）+ 上游结果（初始空）
+	ToolContext ctx;
+	ctx.image = imageMat;
+
+	QList<ToolStep> steps = collectSteps();
+	if (steps.isEmpty())
+	{
+		QMessageBox::information(this, QStringLiteral("运行流程"), QStringLiteral("流程为空"));
+		return;
+	}
+
+	// 顺序执行：每步按 name 创建工具 -> run -> 结果挂到 ctx.results（供下游吃）
+	QStringList lines;
+	for (const ToolStep& s : steps)
+	{
+		ITool* tool = createToolByName(s.algorithm);
+		if (!tool)
+		{
+			lines << QStringLiteral("%1：未找到工具").arg(s.algorithm);
+			continue;
+		}
+
+		tool->loadParams(s.params);
+		ToolResult tr = tool->run(ctx);
+		delete tool;
+
+		if (!tr.ok)
+		{
+			lines << QStringLiteral("%1：失败（%2）").arg(s.algorithm, tr.error);
+			continue;
+		}
+
+		ctx.results.insert(s.id, tr.data);   // 结果按 step.id 挂回，供下游
+		const AlgorithmResult& d = tr.data;
+		const int total = d.detections.size() + d.poses.size() + d.geometry.size();
+		lines << QStringLiteral("%1：产出 %2 项").arg(s.algorithm).arg(total);
+	}
+
+	QMessageBox::information(this, QStringLiteral("运行流程完成"), lines.join("\n"));
 }
